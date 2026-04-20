@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convertisseur AOS 6 → AOS 8 — Alcatel-Lucent OmniSwitch</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #f5f5f7; color: #1a1a1a; }
+  button { font-family: inherit; }
+  textarea, input { font-family: inherit; }
+  code { font-family: 'Courier New', Consolas, Monaco, monospace; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-type="module">
+const { useState, useMemo, useRef } = React;
+
+/* ============================================================
+   Icônes SVG inline (remplacent lucide-react pour standalone)
+   ============================================================ */
+const Icon = ({ path, size = 16, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    {path}
+  </svg>
+);
+const Upload = (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>} />;
+const Copy = (p) => <Icon {...p} path={<><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>} />;
+const Download = (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>} />;
+const FileText = (p) => <Icon {...p} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>} />;
+const RefreshCw = (p) => <Icon {...p} path={<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} />;
+const AlertTriangle = (p) => <Icon {...p} path={<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />;
+const CheckCircle2 = (p) => <Icon {...p} path={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />;
+const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>} />;
+const Plus = (p) => <Icon {...p} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />;
+const Trash2 = (p) => <Icon {...p} path={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>} />;
+const GitCompare = (p) => <Icon {...p} path={<><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/></>} />;
+const FileCode = (p) => <Icon {...p} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="10 13 8 15 10 17"/><polyline points="14 13 16 15 14 17"/></>} />;
+const Terminal = (p) => <Icon {...p} path={<><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></>} />;
+const BookOpen = (p) => <Icon {...p} path={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} />;
+const Save = (p) => <Icon {...p} path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>} />;
+const Layers = (p) => <Icon {...p} path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} />;
+
+/* ============================================================
+   Styles boutons
+   ============================================================ */
+const btnPrimaryStyle = {
+  display: "inline-flex", alignItems: "center", gap: "6px",
+  padding: "10px 18px", background: "#1F5C8B", color: "white",
+  border: "none", borderRadius: "6px", cursor: "pointer",
+  fontSize: "14px", fontWeight: 500
+};
+const btnSecondaryStyle = {
+  display: "inline-flex", alignItems: "center", gap: "6px",
+  padding: "8px 14px", background: "white", color: "#333",
+  border: "1px solid #ccc", borderRadius: "6px", cursor: "pointer",
+  fontSize: "13px"
+};
+
+/* ============================================================
+   Moteur de conversion AOS6 → AOS8
+   ============================================================ */
+const convertPort = (portStr) => {
+  const trimmed = portStr.trim();
+  if (/^\d+\/\d+\/\d+$/.test(trimmed)) return trimmed;
+  if (/^\d+\/\d+$/.test(trimmed)) return `1/${trimmed}`;
+  return trimmed;
+};
+
+const convertLine = (rawLine) => {
+  const line = rawLine.trim();
+  if (!line) return { type: "empty", out: "", note: null };
+
+  if (line.startsWith("!")) {
+    return { type: "comment", out: line.replace(/\s*:\s*$/, ":"), note: null };
+  }
+
+  // SYSTÈME
+  let m = line.match(/^system\s+name\s+(.+)$/i);
+  if (m) {
+    let name = m[1].trim();
+    if (!name.startsWith('"')) name = `"${name}"`;
+    return { type: "converted", out: `system name ${name}`, note: null };
+  }
+  if (/^system\s+location\s+/i.test(line)) return { type: "converted", out: line, note: null };
+
+  m = line.match(/^system\s+timezone\s+(.+)$/i);
+  if (m) return { type: "converted", out: `system timezone ${m[1].trim()}`, note: null };
+
+  if (/^system\s+daylight/i.test(line)) {
+    const dm = line.match(/^system\s+daylight\s+savings\s+time\s+(enable|disable)\s*$/i);
+    if (dm) return { type: "converted", out: `system daylight-savings-time ${dm[1].toLowerCase()}`, note: "Tirets ajoutés : 'daylight savings time' → 'daylight-savings-time' en AOS8" };
+    return { type: "converted", out: line.replace(/daylight\s+savings\s+time/i, "daylight-savings-time"), note: "Tirets ajoutés en AOS8" };
+  }
+
+  // VLANs
+  m = line.match(/^vlan\s+(\d+)\s+enable\s+name\s+(.+)$/i);
+  if (m) {
+    let n = m[2].trim(); if (!n.startsWith('"')) n = `"${n}"`;
+    return { type: "converted", out: `vlan ${m[1]} admin-state enable\nvlan ${m[1]} name ${n}`, note: null };
+  }
+  m = line.match(/^vlan\s+(\d+)\s+enable\s*$/i);
+  if (m) return { type: "converted", out: `vlan ${m[1]} admin-state enable`, note: null };
+
+  m = line.match(/^vlan\s+(\d+)\s+name\s+(.+)$/i);
+  if (m) {
+    let n = m[2].trim(); if (!n.startsWith('"')) n = `"${n}"`;
+    return { type: "converted", out: `vlan ${m[1]} admin-state enable\nvlan ${m[1]} name ${n}`, note: null };
+  }
+
+  m = line.match(/^vlan\s+(\d+)\s+port\s+default\s+([\d\/]+)\s*$/i);
+  if (m) return { type: "converted", out: `vlan ${m[1]} members port ${convertPort(m[2])} untagged`, note: null };
+
+  m = line.match(/^vlan\s+(\d+)\s+802\.1q\s+([\d\/]+)(?:\s+"[^"]*")?\s*$/i);
+  if (m) return { type: "converted", out: `vlan ${m[1]} members port ${convertPort(m[2])} tagged`, note: null };
+
+  // INTERFACES
+  m = line.match(/^interfaces\s+([\d\/]+)\s+alias\s+(.+)$/i);
+  if (m) {
+    let a = m[2].trim(); if (!a.startsWith('"')) a = `"${a}"`;
+    return { type: "converted", out: `interfaces ${convertPort(m[1])} alias ${a}`, note: null };
+  }
+  m = line.match(/^interfaces\s+([\d\/]+)\s+admin\s+(up|down)\s*$/i);
+  if (m) {
+    const newState = m[2].toLowerCase() === "up" ? "enable" : "disable";
+    return { type: "converted", out: `interfaces port ${convertPort(m[1])} admin-state ${newState}`, note: null };
+  }
+  m = line.match(/^interfaces\s+([\d\/]+)\s+(speed|duplex|autoneg)\s+(.+)$/i);
+  if (m) return { type: "converted", out: `interfaces port ${convertPort(m[1])} ${m[2]} ${m[3]}`, note: null };
+
+  // IP
+  if (/^ip\s+service\s+all\s*$/i.test(line)) return { type: "deprecated", out: `! ${line}   ! [AOS8] Déprécié`, note: "'ip service all' déprécié — activer chaque service séparément" };
+
+  m = line.match(/^ip\s+interface\s+"?([^"]+?)"?\s+address\s+(\S+)\s+mask\s+(\S+)\s+vlan\s+(\d+)(.*?)$/i);
+  if (m) {
+    const hasNoForward = /no\s+forward/i.test(m[5]);
+    const ifi = m[5].match(/ifindex\s+(\d+)/i);
+    let out = `ip interface "${m[1]}" address ${m[2]} mask ${m[3]} vlan ${m[4]} admin-state enable`;
+    if (ifi) out += ` ifindex ${ifi[1]}`;
+    return { type: "converted", out, note: hasNoForward ? "Option 'no forward' AOS6 → à gérer via policy/ACL en AOS8" : null };
+  }
+
+  if (/^ip\s+static-route/i.test(line)) return { type: "converted", out: line, note: null };
+
+  m = line.match(/^ip\s+name-server\s+(.+)$/i);
+  if (m) {
+    const srv = m[1].trim().split(/\s+/);
+    return { type: "converted", out: srv.map(s => `ip name-server ${s}`).join("\n"), note: srv.length > 1 ? "Un serveur DNS par ligne en AOS8" : null };
+  }
+
+  if (/^ip\s+helper\s+per-vlan\s+only/i.test(line)) return { type: "converted", out: `ip dhcp relay admin-state enable\nip dhcp relay per-interface-mode`, note: "'ip helper' renommé en 'ip dhcp relay'" };
+  if (/^ip\s+helper\s+forward\s+delay/i.test(line)) {
+    const mm = line.match(/delay\s+(\d+)/);
+    return { type: "converted", out: mm ? `ip dhcp relay forward-delay ${mm[1]}` : `! ${line}`, note: "Renommé en AOS8" };
+  }
+  m = line.match(/^ip\s+helper\s+address\s+(\S+)/i);
+  if (m) return { type: "converted", out: `! [AOS8] À reconfigurer : ip dhcp relay interface "<NOM>" destination ${m[1]}`, note: "Nécessite le nom d'interface en AOS8" };
+
+  // IP MULTICAST
+  m = line.match(/^ip\s+multicast\s+vlan\s+(\d+)\s+status\s+(enable|disable)\s*$/i);
+  if (m) return { type: "converted", out: `ip multicast vlan ${m[1]} admin-state ${m[2].toLowerCase()}`, note: "'status' → 'admin-state'" };
+  if (/^ip\s+multicast\s+vlan/i.test(line)) {
+    const c = line.replace(/\bstatus\s+(enable|disable)\b/i, "admin-state $1");
+    return { type: "converted", out: c, note: c !== line ? "'status' → 'admin-state'" : null };
+  }
+  m = line.match(/^ip\s+multicast\s+status\s+(enable|disable)\s*$/i);
+  if (m) return { type: "converted", out: `ip multicast admin-state ${m[1].toLowerCase()}`, note: "'status' → 'admin-state'" };
+  if (/^ip\s+multicast/i.test(line)) return { type: "converted", out: line, note: "Vérifier sous-commandes ip multicast en AOS8" };
+
+  // AAA
+  if (/^aaa\s+authentication\s+default/i.test(line)) return { type: "deprecated", out: `! ${line}   ! [AOS8] 'default' déprécié`, note: "AOS8 : chaque service a sa propre ligne" };
+  if (/^aaa\s+authentication\s+(console|telnet|ftp|http|snmp|ssh)/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // USER
+  if (/^user\s+\S+\s+password/i.test(line)) return { type: "converted", out: line, note: "Vérifier hash (sha256, md5...) compatible AOS8" };
+  if (/^user\s+password-size\s+min\s+\d+/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^user\s+password-expiration/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^user\s+password-policy/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^user\s+lockout/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^user\s+password-history/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^user\s+password-min-age/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // SESSION
+  m = line.match(/^session\s+timeout\s+(cli|http|telnet|ftp|console)\s+(\d+)\s*$/i);
+  if (m) return { type: "converted", out: `session ${m[1]} timeout ${m[2]}`, note: "Ordre inversé en AOS8" };
+  if (/^session\s+prompt/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // SNMP
+  if (/^snmp\s+security\s+authentication/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^snmp\s+authentication\s+trap\s+enable/i.test(line)) return { type: "converted", out: "snmp authentication-trap enable", note: "Tiret ajouté en AOS8" };
+  if (/^snmp\s+community\s+map/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^snmp\s+station/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^snmp\s+trap\s+filter/i.test(line)) return { type: "converted", out: line.replace(/^snmp\s+trap\s+filter/i, "snmp-trap filter-ip"), note: "'snmp trap filter' → 'snmp-trap filter-ip' en AOS8" };
+
+  // SPANNING TREE
+  if (/^bridge\s+mode\s+1x1/i.test(line)) return { type: "converted", out: `spantree mode per-vlan`, note: "'bridge mode 1x1' → 'spantree mode per-vlan' en AOS8" };
+  if (/^bridge\s+mode\s+flat/i.test(line)) return { type: "converted", out: `spantree mode flat`, note: null };
+  if (/^spantree/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // HEALTH
+  if (/^health\s+threshold/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // NTP
+  m = line.match(/^ntp\s+server\s+(\S+)(.*)$/i);
+  if (m) {
+    let rest = m[2].replace(/\s*key\s+0/i, "");
+    const v = rest.match(/version\s+(\d+)/i);
+    const mp = rest.match(/minpoll\s+(\d+)/i);
+    let out = `ntp server ${m[1]}`;
+    if (v) out += ` version ${v[1]}`;
+    if (mp) out += ` minpoll ${mp[1]}`;
+    return { type: "converted", out, note: null };
+  }
+  if (/^ntp\s+broadcast-client/i.test(line)) return { type: "deprecated", out: `! ${line}   ! [AOS8] Déprécié`, note: "Utiliser 'ntp client admin-state enable'" };
+  if (/^ntp\s+broadcast-delay/i.test(line)) return { type: "converted", out: line, note: null };
+  if (/^ntp\s+client\s+enable/i.test(line)) return { type: "converted", out: "ntp client admin-state enable", note: "'enable' → 'admin-state enable'" };
+
+  // LANPOWER
+  if (/^lanpower\s+\d+\s+capacitor-detection/i.test(line)) return { type: "converted", out: line.replace(/^lanpower\s+(\d+)/i, "lanpower slot 1/$1"), note: "Slot X → slot 1/X en AOS8" };
+  if (/^lanpower\s+\d+\s+priority/i.test(line)) return { type: "converted", out: line.replace(/^lanpower\s+(\d+)/i, "lanpower slot 1/$1"), note: "Format slot modifié" };
+  m = line.match(/^lanpower\s+stop\s+([\d\/]+)\s*$/i);
+  if (m) return { type: "converted", out: `lanpower port ${convertPort(m[1])} admin-state disable`, note: "'stop' → 'admin-state disable'" };
+  m = line.match(/^lanpower\s+start\s+([\d\/]+)\s*$/i);
+  if (m) return { type: "converted", out: `lanpower port ${convertPort(m[1])} admin-state enable`, note: "'start' → 'admin-state enable'" };
+
+  // LOGGING
+  if (/^swlog/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // WEB / HTTP
+  if (/^ip\s+http\s+ssl/i.test(line)) return { type: "converted", out: "http ssl", note: "'ip http ssl' → 'http ssl'" };
+  if (/^ip\s+http\s+server/i.test(line)) return { type: "converted", out: "http server", note: "'ip http server' → 'http server'" };
+
+  // SSH
+  if (/^ssh\s+enable/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // LINK AGGREGATE
+  m = line.match(/^static\s+linkagg\s+(\d+)\s+size\s+(\d+)(?:\s+admin\s+state\s+(enable|disable))?/i);
+  if (m) {
+    let out = `linkagg static agg ${m[1]} size ${m[2]}`;
+    if (m[3]) out += ` admin-state ${m[3].toLowerCase()}`;
+    return { type: "converted", out, note: "Syntaxe linkagg réorganisée" };
+  }
+  m = line.match(/^static\s+agg\s+([\d\/]+)\s+agg\s+num\s+(\d+)/i);
+  if (m) return { type: "converted", out: `linkagg static port ${convertPort(m[1])} agg ${m[2]}`, note: "Syntaxe linkagg modifiée" };
+  m = line.match(/^lacp\s+linkagg\s+(\d+)\s+size\s+(\d+)/i);
+  if (m) return { type: "converted", out: `linkagg lacp agg ${m[1]} size ${m[2]} admin-state enable`, note: "Syntaxe LACP modifiée" };
+
+  // LLDP
+  if (/^lldp/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // QOS
+  if (/^(qos|policy)/i.test(line)) return { type: "deprecated", out: `! ${line}   ! [AOS8] À revoir`, note: "Syntaxe QoS/Policy différente en AOS8" };
+
+  // CONFIGURATION
+  if (/^configuration\s+error-file/i.test(line)) return { type: "converted", out: line, note: null };
+
+  // VIRTUAL CHASSIS
+  if (/^virtual-chassis/i.test(line)) return { type: "converted", out: line, note: "Virtual Chassis : fonctionnalité AOS8" };
+
+  return { type: "unknown", out: line, note: "Commande non reconnue" };
+};
+
+/* ============================================================
+   Composants UI
+   ============================================================ */
+function Panel({ title, icon, children }) {
+  return (
+    <div style={{ background: "white", borderRadius: "8px", border: "1px solid #e0e0e0", padding: "16px 20px", marginBottom: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", color: "#1F5C8B" }}>
+        {icon}
+        <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 500 }}>{title}</h2>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function StatCard({ label, value, color, icon }) {
+  return (
+    <div style={{ background: "white", borderRadius: "8px", border: "1px solid #e0e0e0", padding: "12px 16px" }}>
+      <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+        {icon}{label}
+      </div>
+      <div style={{ fontSize: "24px", fontWeight: 500, color }}>{value}</div>
+    </div>
+  );
+}
+
+function MappingRow({ aos6, aos8 }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "12px", padding: "6px 0", borderBottom: "1px solid #f0f0f0", alignItems: "center" }}>
+      <code style={{ fontSize: "12px", color: "#666" }}>{aos6}</code>
+      <span style={{ color: "#999" }}>→</span>
+      <code style={{ fontSize: "12px", color: "#185FA5" }}>{aos8}</code>
+    </div>
+  );
+}
+
+function CommandCard({ icon, title, commands }) {
+  const [copiedIdx, setCopiedIdx] = useState(-1);
+  const handleCopy = async (cmd, idx) => {
+    try { await navigator.clipboard.writeText(cmd); setCopiedIdx(idx); setTimeout(() => setCopiedIdx(-1), 1500); } catch(e) {}
+  };
+  return (
+    <div style={{ background: "#fafafa", border: "1px solid #e0e0e0", borderRadius: "6px", padding: "12px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px", color: "#1F5C8B", fontSize: "13px", fontWeight: 500 }}>
+        {icon}{title}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {commands.map((c, idx) => (
+          <div key={idx} style={{ paddingBottom: idx < commands.length - 1 ? "8px" : 0, borderBottom: idx < commands.length - 1 ? "1px solid #eee" : "none" }}>
+            <code onClick={() => handleCopy(c.cmd, idx)} title="Cliquer pour copier" style={{
+              display: "block", fontSize: "12px",
+              color: copiedIdx === idx ? "#007700" : "#0C447C",
+              background: copiedIdx === idx ? "#f0fff0" : "white",
+              padding: "4px 8px", borderRadius: "4px",
+              border: copiedIdx === idx ? "1px solid #007700" : "1px solid #e0e0e0",
+              marginBottom: "3px", wordBreak: "break-all", cursor: "pointer", transition: "all 0.15s"
+            }}>{copiedIdx === idx ? "✓ Copié" : c.cmd}</code>
+            <div style={{ fontSize: "11px", color: "#666", paddingLeft: "2px" }}>{c.desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Application principale
+   ============================================================ */
+function AOSConverter() {
+  const [input, setInput] = useState("");
+  const [output, setOutput] = useState("");
+  const [report, setReport] = useState([]);
+  const [stats, setStats] = useState({ converted: 0, unknown: 0, deprecated: 0, comments: 0, total: 0 });
+  const [diffMode, setDiffMode] = useState(false);
+  const [customRules, setCustomRules] = useState([]);
+  const [newRulePattern, setNewRulePattern] = useState("");
+  const [newRuleReplacement, setNewRuleReplacement] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState("");
+  const [cheatsheetVersion, setCheatsheetVersion] = useState("aos8");
+  const fileInputRef = useRef(null);
+
+  const handleConvert = () => {
+    if (!input.trim()) {
+      setReport([{ level: "error", line: 0, text: "Aucune configuration à convertir." }]);
+      setOutput(""); setStats({ converted: 0, unknown: 0, deprecated: 0, comments: 0, total: 0 });
+      return;
+    }
+    const lines = input.split(/\r?\n/);
+    const outLines = []; const newReport = [];
+    let converted = 0, unknown = 0, deprecated = 0, comments = 0;
+    lines.forEach((rawLine, idx) => {
+      const lineNum = idx + 1;
+      let result = convertLine(rawLine);
+      customRules.forEach(rule => {
+        try {
+          const re = new RegExp(rule.pattern);
+          if (re.test(rawLine)) {
+            result = { type: "converted", out: rawLine.replace(re, rule.replacement), note: "Règle personnalisée" };
+          }
+        } catch(e) {}
+      });
+      outLines.push(result.out);
+      if (result.type === "converted") { converted++; if (result.note) newReport.push({ level: "info", line: lineNum, text: `Ligne ${lineNum} : ${result.note}`, original: rawLine }); }
+      else if (result.type === "deprecated") { deprecated++; newReport.push({ level: "warning", line: lineNum, text: `Ligne ${lineNum} : ${result.note || "Déprécié"}`, original: rawLine }); }
+      else if (result.type === "unknown") { unknown++; newReport.push({ level: "error", line: lineNum, text: `Ligne ${lineNum} : commande non reconnue — à vérifier`, original: rawLine }); }
+      else if (result.type === "comment") { comments++; }
+    });
+    setOutput(outLines.join("\n"));
+    setReport(newReport);
+    setStats({ converted, unknown, deprecated, comments, total: lines.length });
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => { setInput(evt.target.result); setReport([]); setOutput(""); };
+    reader.onerror = () => setReport([{ level: "error", line: 0, text: "Erreur lecture fichier." }]);
+    reader.readAsText(file);
+  };
+
+  const handleCopy = async () => {
+    if (!output) return;
+    try { await navigator.clipboard.writeText(output); setCopyFeedback("Copié !"); setTimeout(() => setCopyFeedback(""), 2000); } catch(e) { setCopyFeedback("Erreur"); setTimeout(() => setCopyFeedback(""), 2000); }
+  };
+
+  const handleDownload = () => {
+    if (!output) return;
+    const blob = new Blob([output], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "configuration_aos8.cfg";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleAddRule = () => {
+    if (!newRulePattern.trim() || !newRuleReplacement.trim()) return;
+    setCustomRules([...customRules, { pattern: newRulePattern, replacement: newRuleReplacement }]);
+    setNewRulePattern(""); setNewRuleReplacement("");
+  };
+
+  const handleClear = () => { setInput(""); setOutput(""); setReport([]); setStats({ converted: 0, unknown: 0, deprecated: 0, comments: 0, total: 0 }); };
+
+  const diffLines = useMemo(() => {
+    if (!diffMode || !output) return [];
+    const inL = input.split(/\r?\n/); const outL = output.split(/\r?\n/);
+    const pairs = []; let outIdx = 0;
+    for (let i = 0; i < inL.length; i++) {
+      pairs.push({ aos6: inL[i], aos8: outL[outIdx] || "" });
+      outIdx++;
+    }
+    return pairs;
+  }, [diffMode, input, output]);
+
+  return (
+    <div style={{ background: "#f5f5f7", minHeight: "100vh", padding: "24px" }}>
+      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
+
+        <header style={{ marginBottom: "24px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: "#1F5C8B", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <RefreshCw size={22} color="white" />
+            </div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 500 }}>Convertisseur AOS 6 → AOS 8</h1>
+              <p style={{ margin: 0, fontSize: "13px", color: "#666" }}>Alcatel-Lucent OmniSwitch — Migration de configuration</p>
+            </div>
+          </div>
+        </header>
+
+        {stats.total > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" }}>
+            <StatCard label="Lignes totales" value={stats.total} color="#444" />
+            <StatCard label="Converties" value={stats.converted} color="#007700" icon={<CheckCircle2 size={14} />} />
+            <StatCard label="Dépréciées" value={stats.deprecated} color="#CC7700" icon={<AlertTriangle size={14} />} />
+            <StatCard label="Non reconnues" value={stats.unknown} color="#CC0000" icon={<AlertTriangle size={14} />} />
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: diffMode ? "1fr" : "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+          {!diffMode && (
+            <Panel title="Configuration AOS 6 (source)" icon={<FileCode size={18} />}>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+                <button onClick={() => fileInputRef.current?.click()} style={btnSecondaryStyle}><Upload size={14}/> Charger fichier</button>
+                <input ref={fileInputRef} type="file" accept=".cfg,.txt,.conf" onChange={handleFileUpload} style={{ display: "none" }} />
+                <button onClick={handleClear} style={btnSecondaryStyle}><Trash2 size={14}/> Vider</button>
+              </div>
+              <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Collez ici la configuration AOS 6..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: "1px solid #ccc", borderRadius: "6px", resize: "vertical", background: "#fafafa", boxSizing: "border-box" }} />
+            </Panel>
+          )}
+          {!diffMode && (
+            <Panel title="Configuration AOS 8 (résultat)" icon={<FileText size={18} />}>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+                <button onClick={handleCopy} disabled={!output} style={{ ...btnSecondaryStyle, opacity: output ? 1 : 0.5 }}><Copy size={14}/> {copyFeedback || "Copier"}</button>
+                <button onClick={handleDownload} disabled={!output} style={{ ...btnSecondaryStyle, opacity: output ? 1 : 0.5 }}><Download size={14}/> Télécharger</button>
+              </div>
+              <textarea value={output} readOnly placeholder="Résultat..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: "1px solid #ccc", borderRadius: "6px", resize: "vertical", background: "#f8fbfd", boxSizing: "border-box" }} />
+            </Panel>
+          )}
+          {diffMode && (
+            <Panel title="Comparaison AOS 6 ↔ AOS 8" icon={<GitCompare size={18} />}>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                <button onClick={handleCopy} disabled={!output} style={{ ...btnSecondaryStyle, opacity: output ? 1 : 0.5 }}><Copy size={14}/> {copyFeedback || "Copier AOS8"}</button>
+                <button onClick={handleDownload} disabled={!output} style={{ ...btnSecondaryStyle, opacity: output ? 1 : 0.5 }}><Download size={14}/> Télécharger</button>
+              </div>
+              <div style={{ border: "1px solid #ccc", borderRadius: "6px", maxHeight: "500px", overflow: "auto" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "1px solid #ccc", zIndex: 1 }}>
+                  <div style={{ padding: "8px 12px", fontSize: "12px", fontWeight: 500, borderRight: "1px solid #ccc" }}>AOS 6</div>
+                  <div style={{ padding: "8px 12px", fontSize: "12px", fontWeight: 500 }}>AOS 8</div>
+                </div>
+                {diffLines.map((p, idx) => {
+                  const ch = p.aos6.trim() && p.aos6 !== p.aos8;
+                  return (
+                    <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid #eee", fontFamily: "'Courier New', monospace", fontSize: "12px", background: ch ? "#fffbe6" : "white" }}>
+                      <div style={{ padding: "4px 12px", borderRight: "1px solid #eee", whiteSpace: "pre-wrap", color: "#666" }}><span style={{ color: "#999", marginRight: "8px" }}>{idx+1}</span>{p.aos6 || <span style={{ color: "#ccc" }}>—</span>}</div>
+                      <div style={{ padding: "4px 12px", whiteSpace: "pre-wrap", color: ch ? "#0C447C" : "#333" }}>{p.aos8 || <span style={{ color: "#ccc" }}>—</span>}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Panel>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+          <button onClick={handleConvert} style={btnPrimaryStyle}><RefreshCw size={16}/> Convertir vers AOS 8</button>
+          <button onClick={() => setDiffMode(!diffMode)} style={btnSecondaryStyle}><GitCompare size={14}/> {diffMode ? "Mode édition" : "Mode comparaison"}</button>
+        </div>
+
+        {report.length > 0 && (
+          <Panel title={`Rapport (${report.length})`} icon={<Info size={18} />}>
+            <div style={{ maxHeight: "300px", overflow: "auto", border: "1px solid #e0e0e0", borderRadius: "6px" }}>
+              {report.map((r, idx) => (
+                <div key={idx} style={{ padding: "10px 14px", borderBottom: idx < report.length - 1 ? "1px solid #eee" : "none", background: r.level === "error" ? "#fff5f5" : r.level === "warning" ? "#fffbf0" : "#f0f7ff", fontSize: "13px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                    {r.level === "error" ? <AlertTriangle size={14} color="#CC0000"/> : r.level === "warning" ? <AlertTriangle size={14} color="#CC7700"/> : <Info size={14} color="#185FA5"/>}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: r.level === "error" ? "#CC0000" : r.level === "warning" ? "#CC7700" : "#185FA5", fontWeight: 500 }}>{r.text}</div>
+                      {r.original && <div style={{ marginTop: "4px", fontFamily: "'Courier New', monospace", fontSize: "12px", color: "#666" }}>→ {r.original.trim()}</div>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        )}
+
+        <Panel title="Règles personnalisées (regex)" icon={<Plus size={18} />}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+            <input type="text" value={newRulePattern} onChange={e => setNewRulePattern(e.target.value)} placeholder="Pattern regex" style={{ flex: 1, minWidth: "200px", padding: "8px 12px", border: "1px solid #ccc", borderRadius: "6px", fontFamily: "'Courier New', monospace", fontSize: "13px" }}/>
+            <input type="text" value={newRuleReplacement} onChange={e => setNewRuleReplacement(e.target.value)} placeholder="Remplacement" style={{ flex: 1, minWidth: "200px", padding: "8px 12px", border: "1px solid #ccc", borderRadius: "6px", fontFamily: "'Courier New', monospace", fontSize: "13px" }}/>
+            <button onClick={handleAddRule} style={btnSecondaryStyle}><Plus size={14}/> Ajouter</button>
+          </div>
+          {customRules.length > 0 && (
+            <div style={{ border: "1px solid #e0e0e0", borderRadius: "6px" }}>
+              {customRules.map((r, idx) => (
+                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", borderBottom: idx < customRules.length - 1 ? "1px solid #eee" : "none", fontFamily: "'Courier New', monospace", fontSize: "13px" }}>
+                  <span style={{ flex: 1, color: "#666" }}>{r.pattern}</span>
+                  <span>→</span>
+                  <span style={{ flex: 1, color: "#185FA5" }}>{r.replacement}</span>
+                  <button onClick={() => setCustomRules(customRules.filter((_, i) => i !== idx))} style={{ ...btnSecondaryStyle, padding: "4px 8px" }}><Trash2 size={12}/></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="Aide-mémoire des commandes" icon={<Terminal size={18} />}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "16px", borderBottom: "1px solid #e0e0e0", paddingBottom: "12px" }}>
+            <button onClick={() => setCheatsheetVersion("aos8")} style={{ ...btnSecondaryStyle, background: cheatsheetVersion === "aos8" ? "#1F5C8B" : "white", color: cheatsheetVersion === "aos8" ? "white" : "#333", borderColor: cheatsheetVersion === "aos8" ? "#1F5C8B" : "#ccc" }}><Terminal size={14}/> AOS 8</button>
+            <button onClick={() => setCheatsheetVersion("aos6")} style={{ ...btnSecondaryStyle, background: cheatsheetVersion === "aos6" ? "#1F5C8B" : "white", color: cheatsheetVersion === "aos6" ? "white" : "#333", borderColor: cheatsheetVersion === "aos6" ? "#1F5C8B" : "#ccc" }}><Terminal size={14}/> AOS 6</button>
+          </div>
+
+          {cheatsheetVersion === "aos8" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "12px" }}>
+              <CommandCard icon={<FileText size={14}/>} title="Affichage & statut" commands={[
+                { cmd: "show running-directory", desc: "Statut config (WORKING/CERTIFIED)" },
+                { cmd: "show configuration snapshot", desc: "Config complète" },
+                { cmd: "show system", desc: "Infos système" },
+                { cmd: "show chassis", desc: "État du châssis" },
+                { cmd: "show microcode", desc: "Version AOS" }
+              ]}/>
+              <CommandCard icon={<Save size={14}/>} title="Sauvegarde" commands={[
+                { cmd: "write memory", desc: "Sauvegarde en WORKING" },
+                { cmd: "write memory flash-synchro", desc: "Sauvegarde + synchro CMMs" },
+                { cmd: "copy running certified", desc: "Valide la config" },
+                { cmd: "reload from working no rollback-timeout", desc: "Redémarrage sur WORKING" }
+              ]}/>
+              <CommandCard icon={<Layers size={14}/>} title="Virtual Chassis" commands={[
+                { cmd: "show virtual-chassis topology", desc: "Topologie VC" },
+                { cmd: "show virtual-chassis vf-link", desc: "État liens VFL" },
+                { cmd: "cat /flash/certified/vcsetup.cfg", desc: "Config VC" },
+                { cmd: "virtual-chassis vf-link-mode auto", desc: "Découverte auto VFL" },
+                { cmd: "virtual-chassis auto-vf-link-port 1/1/X", desc: "Déclare port VFL" },
+                { cmd: "virtual-chassis chassis-id 1 chassis-group <ID>", desc: "Groupe VC (même ID)" }
+              ]}/>
+              <CommandCard icon={<FileCode size={14}/>} title="VLANs & interfaces" commands={[
+                { cmd: "show vlan", desc: "Liste VLANs" },
+                { cmd: "show vlan port", desc: "Mapping ports/VLANs" },
+                { cmd: "show interfaces status", desc: "État up/down" },
+                { cmd: "show ip interface", desc: "Interfaces IP" },
+                { cmd: "interfaces port 1/1/X admin-state enable", desc: "Active un port" },
+                { cmd: "spantree mode per-vlan", desc: "Spanning-tree par VLAN" }
+              ]}/>
+              <CommandCard icon={<Terminal size={14}/>} title="Table MAC & ARP" commands={[
+                { cmd: "show mac-learning", desc: "Table MAC" },
+                { cmd: "show mac-learning port 1/1/X", desc: "MACs d'un port" },
+                { cmd: "show mac-learning vlan X", desc: "MACs d'un VLAN" },
+                { cmd: "show arp", desc: "Table ARP" }
+              ]}/>
+              <CommandCard icon={<Layers size={14}/>} title="IP Multicast (IGMP)" commands={[
+                { cmd: "ip multicast admin-state enable", desc: "Active multicast global" },
+                { cmd: "ip multicast vlan X admin-state enable", desc: "Active par VLAN" },
+                { cmd: "ip multicast vlan X version 2", desc: "Version IGMP" },
+                { cmd: "show ip multicast", desc: "État global" }
+              ]}/>
+            </div>
+          )}
+
+          {cheatsheetVersion === "aos6" && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "12px" }}>
+              <CommandCard icon={<FileText size={14}/>} title="Affichage & statut" commands={[
+                { cmd: "show running-directory", desc: "Directory active" },
+                { cmd: "show configuration snapshot", desc: "Config complète" },
+                { cmd: "show system", desc: "Infos système" },
+                { cmd: "show chassis", desc: "État châssis" },
+                { cmd: "show microcode", desc: "Version AOS" }
+              ]}/>
+              <CommandCard icon={<Save size={14}/>} title="Sauvegarde" commands={[
+                { cmd: "write memory", desc: "Sauvegarde en working" },
+                { cmd: "copy working certified", desc: "Valide" },
+                { cmd: "copy working certified flash-synchro", desc: "+ synchro stack" },
+                { cmd: "reload working no rollback-timeout", desc: "Redémarre sur working" }
+              ]}/>
+              <CommandCard icon={<Layers size={14}/>} title="Stack" commands={[
+                { cmd: "show stack topology", desc: "Topologie stack" },
+                { cmd: "show stack status", desc: "État stack" },
+                { cmd: "takeover", desc: "Bascule CMM" }
+              ]}/>
+              <CommandCard icon={<FileCode size={14}/>} title="VLANs & interfaces" commands={[
+                { cmd: "show vlan", desc: "Liste VLANs" },
+                { cmd: "show vlan port X/Y", desc: "VLANs d'un port" },
+                { cmd: "show interfaces status", desc: "État up/down" },
+                { cmd: "interfaces X/Y admin up", desc: "Active port" },
+                { cmd: "interfaces X/Y admin down", desc: "Désactive port" }
+              ]}/>
+              <CommandCard icon={<Terminal size={14}/>} title="Table MAC & ARP" commands={[
+                { cmd: "show mac-address-table", desc: "Table MAC" },
+                { cmd: "show mac-address-table slot X", desc: "MACs d'un slot" },
+                { cmd: "show mac-address-table vlan X", desc: "MACs d'un VLAN" },
+                { cmd: "show arp", desc: "Table ARP" }
+              ]}/>
+              <CommandCard icon={<BookOpen size={14}/>} title="Monitoring" commands={[
+                { cmd: "show lldp remote-system", desc: "Voisins LLDP" },
+                { cmd: "show health", desc: "CPU/mémoire" },
+                { cmd: "show lanpower slot X", desc: "État PoE" },
+                { cmd: "show log swlog", desc: "Logs système" }
+              ]}/>
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="Règles de conversion principales" icon={<Info size={18} />}>
+          <div style={{ fontSize: "13px", color: "#444", lineHeight: 1.6 }}>
+            <MappingRow aos6={`vlan X enable name "Y"`} aos8={`vlan X admin-state enable + vlan X name "Y"`}/>
+            <MappingRow aos6="vlan X port default Y/Z" aos8="vlan X members port 1/Y/Z untagged"/>
+            <MappingRow aos6="vlan X 802.1q Y/Z" aos8="vlan X members port 1/Y/Z tagged"/>
+            <MappingRow aos6="interfaces Y/Z admin up" aos8="interfaces port 1/Y/Z admin-state enable"/>
+            <MappingRow aos6="ip helper per-vlan only" aos8="ip dhcp relay admin-state enable + per-interface-mode"/>
+            <MappingRow aos6="ip http ssl" aos8="http ssl"/>
+            <MappingRow aos6="session timeout cli X" aos8="session cli timeout X"/>
+            <MappingRow aos6="snmp authentication trap enable" aos8="snmp authentication-trap enable"/>
+            <MappingRow aos6="bridge mode 1x1" aos8="spantree mode per-vlan"/>
+            <MappingRow aos6="ntp client enable" aos8="ntp client admin-state enable"/>
+            <MappingRow aos6="lanpower stop Y/Z" aos8="lanpower port 1/Y/Z admin-state disable"/>
+            <MappingRow aos6="ntp broadcast-client enable" aos8="[déprécié] ntp client admin-state enable seul"/>
+            <MappingRow aos6="ntp broadcast-delay <num>" aos8="ntp broadcast-delay <num> (identique)"/>
+            <MappingRow aos6="system daylight savings time enable" aos8="system daylight-savings-time enable (tirets)"/>
+            <MappingRow aos6="ip service all" aos8="[déprécié]"/>
+            <MappingRow aos6="ip multicast vlan X status enable" aos8="ip multicast vlan X admin-state enable"/>
+            <MappingRow aos6="user password-size min X" aos8="user password-size min X (identique)"/>
+            <MappingRow aos6="snmp trap filter" aos8="snmp-trap filter-ip (ipv4addr | ipv6v4addr | rfc-3513) string"/>
+          </div>
+        </Panel>
+
+        <footer style={{ marginTop: "24px", textAlign: "center", fontSize: "12px", color: "#999" }}>
+          Outil de conversion AOS6 → AOS8 · Traitement 100% client · Vérifiez toujours la conf générée
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<AOSConverter />);
+</script>
+</body>
+</html>
