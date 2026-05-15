@@ -193,7 +193,13 @@ const convertLine = (rawLine) => {
   // SNMP
   if (/^snmp\s+security\s+authentication/i.test(line)) return { type: "converted", out: line, note: null };
   if (/^snmp\s+authentication\s+trap\s+enable/i.test(line)) return { type: "converted", out: "snmp authentication-trap enable", note: "Tiret ajouté en AOS8" };
-  if (/^snmp\s+community\s+map/i.test(line)) return { type: "converted", out: line, note: null };
+  m = line.match(/^snmp\s+community\s+map\s+mode\s+(on|off|enable|disable)\s*$/i);
+  if (m) {
+    const state = m[1].toLowerCase();
+    const newState = (state === "on" || state === "enable") ? "enable" : "disable";
+    return { type: "converted", out: `snmp community-map mode ${newState}`, note: "'community map mode on/off' → 'community-map mode enable/disable' en AOS8" };
+  }
+  if (/^snmp\s+community\s+map/i.test(line)) return { type: "converted", out: line.replace(/^snmp\s+community\s+map/i, "snmp community-map"), note: "'community map' → 'community-map' (tiret) en AOS8" };
   if (/^snmp\s+station/i.test(line)) return { type: "converted", out: line, note: null };
   if (/^snmp\s+trap\s+filter/i.test(line)) return { type: "converted", out: line.replace(/^snmp\s+trap\s+filter/i, "snmp-trap filter-ip"), note: "'snmp trap filter' → 'snmp-trap filter-ip' en AOS8" };
 
@@ -637,15 +643,17 @@ function AOSConverter() {
             <MappingRow aos6="ip http ssl" aos8="http ssl"/>
             <MappingRow aos6="session timeout cli X" aos8="session cli timeout X"/>
             <MappingRow aos6="snmp authentication trap enable" aos8="snmp authentication-trap enable"/>
+            <MappingRow aos6="snmp community map mode off" aos8="snmp community-map mode disable"/>
+            <MappingRow aos6="snmp community map mode on" aos8="snmp community-map mode enable"/>
             <MappingRow aos6="bridge mode 1x1" aos8="spantree mode per-vlan"/>
             <MappingRow aos6="ntp client enable" aos8="ntp client admin-state enable"/>
             <MappingRow aos6="lanpower stop Y/Z" aos8="lanpower port 1/Y/Z admin-state disable"/>
-            <MappingRow aos6="ntp broadcast-client enable" aos8="[déprécié] ntp client admin-state enable/disable"/>
+            <MappingRow aos6="ntp broadcast-client enable" aos8="[déprécié] ntp client admin-state enable seul"/>
             <MappingRow aos6="ntp broadcast-delay <num>" aos8="ntp broadcast-delay <num> (identique)"/>
-            <MappingRow aos6="system daylight savings time enable" aos8="system daylight-savings-time enable"/>
+            <MappingRow aos6="system daylight savings time enable" aos8="system daylight-savings-time enable (tirets)"/>
             <MappingRow aos6="ip service all" aos8="[déprécié]"/>
             <MappingRow aos6="ip multicast vlan X status enable" aos8="ip multicast vlan X admin-state enable"/>
-            <MappingRow aos6="user password-size min X" aos8="user password-size min X "/>
+            <MappingRow aos6="user password-size min X" aos8="user password-size min X (identique)"/>
             <MappingRow aos6="snmp trap filter" aos8="snmp-trap filter-ip (ipv4addr | ipv6v4addr | rfc-3513) string"/>
           </div>
         </Panel>
