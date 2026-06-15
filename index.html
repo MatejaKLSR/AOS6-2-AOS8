@@ -55,6 +55,7 @@ const ChevL = (p) => <Icon {...p} path={<><polyline points="15 18 9 12 15 6"/></
 const ChevR = (p) => <Icon {...p} path={<><polyline points="9 18 15 12 9 6"/></>} />;
 const BookmarkI = (p) => <Icon {...p} path={<><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></>} />;
 const PlayI = (p) => <Icon {...p} path={<><polygon points="5 3 19 12 5 21 5 3"/></>} />;
+const Tag = (p) => <Icon {...p} path={<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>} />;
 
 /* Thèmes clair/sombre */
 const TH = {
@@ -155,7 +156,7 @@ const convertLine = (rawLine) => {
   if (m) return { type: "converted", out: `interfaces port ${convertPort(m[1])} ${m[2]} ${m[3]}`, note: null };
 
   // IP
-  if (/^ip\s+service\s+all\s*$/i.test(line)) return { type: "deprecated", out: `! ${line}   ! [AOS8] Déprécié`, note: "'ip service all' déprécié — activer chaque service séparément" };
+  if (/^ip\s+service\s+all\s*$/i.test(line)) return { type: "deprecated", out: line, note: "'ip service all' déprécié — activer chaque service séparément" };
 
   m = line.match(/^ip\s+interface\s+"?([^"]+?)"?\s+address\s+(\S+)\s+mask\s+(\S+)\s+vlan\s+(\d+)(.*?)$/i);
   if (m) {
@@ -194,7 +195,7 @@ const convertLine = (rawLine) => {
   if (/^ip\s+multicast/i.test(line)) return { type: "converted", out: line, note: "Vérifier sous-commandes ip multicast en AOS8" };
 
   // AAA
-  if (/^aaa\s+authentication\s+default/i.test(line)) return { type: "deprecated", out: `! ${line}   ! [AOS8] 'default' déprécié`, note: "AOS8 : chaque service a sa propre ligne" };
+  if (/^aaa\s+authentication\s+default/i.test(line)) return { type: "deprecated", out: line, note: "AOS8 : chaque service a sa propre ligne (le mot-clé 'default' est déprécié)" };
   if (/^aaa\s+authentication\s+(console|telnet|ftp|http|snmp|ssh)/i.test(line)) return { type: "converted", out: line, note: null };
 
   // USER
@@ -243,7 +244,7 @@ const convertLine = (rawLine) => {
     if (mp) out += ` minpoll ${mp[1]}`;
     return { type: "converted", out, note: null };
   }
-  if (/^ntp\s+broadcast-client/i.test(line)) return { type: "deprecated", out: `! ${line}   ! [AOS8] Déprécié`, note: "Utiliser 'ntp client admin-state enable'" };
+  if (/^ntp\s+broadcast-client/i.test(line)) return { type: "deprecated", out: line, note: "Déprécié — Utiliser plutôt 'ntp client admin-state enable'" };
   if (/^ntp\s+broadcast-delay/i.test(line)) return { type: "converted", out: line, note: null };
   if (/^ntp\s+client\s+enable/i.test(line)) return { type: "converted", out: "ntp client admin-state enable", note: "'enable' → 'admin-state enable'" };
 
@@ -281,7 +282,7 @@ const convertLine = (rawLine) => {
   if (/^lldp/i.test(line)) return { type: "converted", out: line, note: null };
 
   // QOS
-  if (/^(qos|policy)/i.test(line)) return { type: "deprecated", out: `! ${line}   ! [AOS8] À revoir`, note: "Syntaxe QoS/Policy différente en AOS8" };
+  if (/^(qos|policy)/i.test(line)) return { type: "deprecated", out: line, note: "Syntaxe QoS/Policy différente en AOS8" };
 
   // CONFIGURATION
   if (/^configuration\s+error-file/i.test(line)) return { type: "converted", out: line, note: null };
@@ -387,6 +388,85 @@ function TemplatesPanel({templates,save,input,finalOut,setInput,setOut,setEditOu
   </Panel>;
 }
 
+/* ── PortAliasModal ── */
+function PortAliasModal({ th, isOpen, onClose, output, outputEdited, editedOutput, setOutput, setEditedOutput, setOutputEdited }) {
+  const [port, setPort] = useState("");
+  const [deviceType, setDeviceType] = useState("AP");
+  const [customName, setCustomName] = useState("");
+
+  if (!isOpen) return null;
+
+  const types = {
+    "AP": { label: "Borne Wi-Fi", prefix: "AP" },
+    "ALARM": { label: "Alarme / SSI", prefix: "ALARM" },
+    "NVR": { label: "Caméra / NVR", prefix: "CAM" },
+    "PHONE": { label: "Téléphone IP", prefix: "TEL" },
+    "PC": { label: "Poste Client / PC", prefix: "PC" },
+    "SRV": { label: "Serveur", prefix: "SRV" }
+  };
+
+  const handleInject = () => {
+    if (!port.trim()) return;
+    
+    let formattedPort = port.trim();
+    if (/^\d+\/\d+$/.test(formattedPort)) {
+      formattedPort = `1/${formattedPort}`;
+    }
+
+    const prefix = types[deviceType].prefix;
+    const cleanName = customName.trim().toUpperCase().replace(/[^A-Z0-9_\-]/g, "_");
+    const finalAlias = cleanName ? `${prefix}_${cleanName}` : prefix;
+
+    const line = `interfaces port ${formattedPort} alias "${finalAlias}"`;
+    
+    // Déterminer la base textuelle sur laquelle injecter la nouvelle ligne
+    const currentBase = outputEdited ? editedOutput : output;
+    const updatedText = currentBase ? `${currentBase}\n${line}` : line;
+    
+    setEditedOutput(updatedText);
+    setOutputEdited(true);
+    
+    setPort("");
+    setCustomName("");
+    onClose();
+  };
+
+  const iSt = { width: "100%", padding: "10px 12px", border: `1px solid ${th.borderS}`, borderRadius: "6px", fontSize: "13px", background: th.panel, color: th.text, marginBottom: "14px" };
+  const lSt = { display: "block", fontSize: "12px", fontWeight: 500, color: th.text, marginBottom: "4px" };
+
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+      <div style={{ background: th.panel, border: `1px solid ${th.border}`, borderRadius: "8px", width: "420px", padding: "20px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "15px", fontWeight: 500, color: th.text, marginBottom: "16px" }}>
+          <Tag size={16} color={th.primary} /> Nouvel alias d'interface (AOS 8)
+        </div>
+        
+        <div>
+          <label style={lSt}>Port ou interface</label>
+          <input type="text" value={port} onChange={e => setPort(e.target.value)} placeholder="Ex: 1/1/24 ou 1/24" style={iSt} />
+        </div>
+
+        <div>
+          <label style={lSt}>Type d'équipement</label>
+          <select value={deviceType} onChange={e => setDeviceType(e.target.value)} style={iSt}>
+            {Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label style={lSt}>Nom descriptif de l'alias</label>
+          <input type="text" value={customName} onChange={e => setCustomName(e.target.value)} placeholder="Ex: ACCUEIL, ETAGE1" style={iSt} />
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+          <button onClick={onClose} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${th.borderS}`, color: th.text, borderRadius: "6px", cursor: "pointer", fontSize: "13px" }}>Annuler</button>
+          <button onClick={handleInject} disabled={!port.trim()} style={{ padding: "8px 14px", background: th.primary, color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 500, opacity: !port.trim() ? 0.5 : 1 }}>Injecter dans le résultat</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── WizardMode ── */
 function WizardMode({th,bp,bs,onComplete}){
   const [step,setStep]=useState(1);
@@ -395,6 +475,11 @@ function WizardMode({th,bp,bs,onComplete}){
   const iSt={width:"100%",padding:"8px 12px",border:`1px solid ${th.borderS}`,borderRadius:"6px",fontSize:"13px",background:th.panel,color:th.text,boxSizing:"border-box"};
   const lSt={display:"block",fontSize:"12px",fontWeight:500,color:th.text,marginBottom:"4px"};
   const steps=[{n:1,l:"Système"},{n:2,l:"VLANs"},{n:3,l:"Ports"},{n:4,l:"Réseau"},{n:5,l:"Services"},{n:6,l:"Aperçu"}];
+  
+  const activeVlans = useMemo(() => {
+    return d.vlans.filter(v => v.id && v.id.trim() !== "").map(v => v.id.trim());
+  }, [d.vlans]);
+
   const gen=useMemo(()=>{
     const L=[];
     L.push("! ============================================================","! Configuration AOS 8 — Assistant","! ============================================================","");
@@ -454,25 +539,69 @@ function WizardMode({th,bp,bs,onComplete}){
         <div style={{fontSize:"13px",fontWeight:500,color:th.text,marginBottom:"5px"}}>Ports access (untagged) — format 1/1/X</div>
         {d.acc.map((p,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:"5px",marginBottom:"4px"}}>
           <input style={{...iSt,width:"auto"}} value={p.port} onChange={e=>setD(pr=>({...pr,acc:pr.acc.map((x,j)=>j===i?{...x,port:e.target.value}:x)}))} placeholder="1/1/1"/>
-          <input style={{...iSt,width:"auto"}} value={p.vlan} onChange={e=>setD(pr=>({...pr,acc:pr.acc.map((x,j)=>j===i?{...x,vlan:e.target.value}:x)}))} placeholder="VLAN"/>
+          <select style={{...iSt,width:"auto"}} value={p.vlan} onChange={e=>setD(pr=>({...pr,acc:pr.acc.map((x,j)=>j===i?{...x,vlan:e.target.value}:x)}))}>
+            <option value="">-- Choisir un VLAN --</option>
+            {activeVlans.map(vid => {
+              const matchingVlan = d.vlans.find(v => v.id?.trim() === vid);
+              const label = matchingVlan && matchingVlan.name ? `VLAN ${vid} (${matchingVlan.name})` : `VLAN ${vid}`;
+              return <option key={vid} value={vid}>{label}</option>;
+            })}
+          </select>
           <button onClick={()=>setD(pr=>({...pr,acc:pr.acc.filter((_,j)=>j!==i)}))} style={{...bs,padding:"4px"}}><Trash2 size={11}/></button>
         </div>))}
-        <button onClick={()=>setD(p=>({...p,acc:[...p.acc,{port:"",vlan:""}]}))} style={{...bs,fontSize:"12px"}}><Plus size={11}/> Port access</button>
+        <button onClick={()=>setD(p=>({...p,acc:[...p.acc,{port:"",vlan:activeVlans[0]||""}]}))} style={{...bs,fontSize:"12px"}}><Plus size={11}/> Port access</button>
       </div>
       <div>
-        <div style={{fontSize:"13px",fontWeight:500,color:th.text,marginBottom:"5px"}}>Ports trunk (tagged) — VLANs séparés par virgule</div>
-        {d.trunk.map((p,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr 2fr auto",gap:"5px",marginBottom:"4px"}}>
-          <input style={{...iSt,width:"auto"}} value={p.port} onChange={e=>setD(pr=>({...pr,trunk:pr.trunk.map((x,j)=>j===i?{...x,port:e.target.value}:x)}))} placeholder="1/1/24"/>
-          <input style={{...iSt,width:"auto"}} value={p.vlans} onChange={e=>setD(pr=>({...pr,trunk:pr.trunk.map((x,j)=>j===i?{...x,vlans:e.target.value}:x)}))} placeholder="10, 20, 30"/>
-          <button onClick={()=>setD(pr=>({...pr,trunk:pr.trunk.filter((_,j)=>j!==i)}))} style={{...bs,padding:"4px"}}><Trash2 size={11}/></button>
-        </div>))}
+        <div style={{fontSize:"13px",fontWeight:500,color:th.text,marginBottom:"5px"}}>Ports trunk (tagged) — cochez les VLANs à propager</div>
+        {d.trunk.map((p,i)=>{
+          const currentSelectedVlans = p.vlans ? p.vlans.split(/[,\s]+/).filter(Boolean).map(v => v.trim()) : [];
+          return (
+            <div key={i} style={{border:`1px solid ${th.border}`, borderRadius:"6px", padding:"10px", marginBottom:"8px", background:th.subtle}}>
+              <div style={{display:"flex", gap:"8px", alignItems:"center", marginBottom:"8px"}}>
+                <input style={{...iSt, width:"200px"}} value={p.port} onChange={e=>setD(pr=>({...pr,trunk:pr.trunk.map((x,j)=>j===i?{...x,port:e.target.value}:x)}))} placeholder="Ex: 1/1/24"/>
+                <div style={{flex:1}} />
+                <button onClick={()=>setD(pr=>({...pr,trunk:pr.trunk.filter((_,j)=>j!==i)}))} style={{...bs,padding:"4px 8px"}}><Trash2 size={11}/> Supprimer ce trunk</button>
+              </div>
+              {activeVlans.length === 0 ? (
+                <div style={{fontSize:"12px", color:th.dim, fontStyle:"italic"}}>Aucun VLAN créé à l'étape précédente.</div>
+              ) : (
+                <div style={{display:"flex", gap:"10px", flexWrap:"wrap", background:th.panel, padding:"6px 10px", borderRadius:"4px", border:`1px solid ${th.borderS}`}}>
+                  {d.vlans.filter(v => v.id?.trim()).map(v => {
+                    const vid = v.id.trim();
+                    const isChecked = currentSelectedVlans.includes(vid);
+                    return (
+                      <label key={vid} style={{display:"inline-flex", alignItems:"center", gap:"4px", fontSize:"12px", color:th.text, cursor:"pointer"}}>
+                        <input type="checkbox" checked={isChecked} onChange={e => {
+                          let nextVlans = [...currentSelectedVlans];
+                          if (e.target.checked) {
+                            if (!nextVlans.includes(vid)) nextVlans.push(vid);
+                          } else {
+                            nextVlans = nextVlans.filter(x => x !== vid);
+                          }
+                          setD(pr => ({...pr, trunk: pr.trunk.map((x,j) => j === i ? {...x, vlans: nextVlans.join(", ")} : x)}));
+                        }} />
+                        {vid}{v.name ? ` (${v.name})` : ''}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
         <button onClick={()=>setD(p=>({...p,trunk:[...p.trunk,{port:"",vlans:""}]}))} style={{...bs,fontSize:"12px"}}><Plus size={11}/> Port trunk</button>
       </div>
     </div>}
     {step===4&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:"10px"}}>
       <div><label style={lSt}>IP de management</label><input style={iSt} value={d.ip} onChange={e=>upd("ip",e.target.value)} placeholder="10.0.0.1"/></div>
       <div><label style={lSt}>Masque</label><input style={iSt} value={d.mask} onChange={e=>upd("mask",e.target.value)}/></div>
-      <div><label style={lSt}>VLAN management</label><input style={iSt} value={d.mvlan} onChange={e=>upd("mvlan",e.target.value)}/></div>
+      <div>
+        <label style={lSt}>VLAN management</label>
+        <select style={iSt} value={d.mvlan} onChange={e=>upd("mvlan",e.target.value)}>
+          <option value="">-- Choisir --</option>
+          {activeVlans.map(vid => <option key={vid} value={vid}>VLAN {vid}</option>)}
+        </select>
+      </div>
       <div><label style={lSt}>Passerelle</label><input style={iSt} value={d.gw} onChange={e=>upd("gw",e.target.value)} placeholder="10.0.0.254"/></div>
       <div style={{gridColumn:"1/-1"}}><label style={lSt}>Serveurs DNS</label><input style={iSt} value={d.dns} onChange={e=>upd("dns",e.target.value)} placeholder="8.8.8.8 1.1.1.1"/></div>
       <div style={{gridColumn:"1/-1"}}><label style={lSt}>Serveurs NTP</label><input style={iSt} value={d.ntp} onChange={e=>upd("ntp",e.target.value)} placeholder="pool.ntp.org"/></div>
@@ -517,6 +646,8 @@ function AOSConverter() {
   const [selectedOptions, setSelectedOptions] = useState({});
   const [outputEdited, setOutputEdited] = useState(false);
   const [editedOutput, setEditedOutput] = useState("");
+  const [isAliasModalOpen, setIsAliasModalOpen] = useState(false);
+  
   // Theme
   const [thName, setThName] = useState(() => { try { return localStorage.getItem("aos-th") || "light"; } catch { return "light"; } });
   const th = TH[thName];
@@ -576,6 +707,11 @@ function AOSConverter() {
   const handleCopy = async () => {
     if (!finalOutput) return;
     try { await navigator.clipboard.writeText(finalOutput); setCopyFeedback("Copié !"); setTimeout(() => setCopyFeedback(""), 2000); } catch(e) { setCopyFeedback("Erreur"); setTimeout(() => setCopyFeedback(""), 2000); }
+  };
+
+  const handleResetEdits = () => {
+    setEditedOutput("");
+    setOutputEdited(false);
   };
 
   // Options injectables
@@ -661,6 +797,7 @@ function AOSConverter() {
               <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
                 <button onClick={() => fileInputRef.current?.click()} style={btnSecondary}><Upload size={14}/> Charger fichier</button>
                 <input ref={fileInputRef} type="file" accept=".cfg,.txt,.conf" onChange={handleFileUpload} style={{ display: "none" }} />
+                <button onClick={() => setIsAliasModalOpen(true)} style={btnSecondary}><Plus size={14}/> Ajouter un alias</button>
                 <button onClick={handleClear} style={btnSecondary}><Trash2 size={14}/> Vider</button>
               </div>
               <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Collez ici la configuration AOS 6..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: `1px solid ${th.borderS}`, borderRadius: "6px", resize: "vertical", background: th.inp, color: th.text, boxSizing: "border-box" }} />
@@ -671,6 +808,7 @@ function AOSConverter() {
               <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
                 <button onClick={handleCopy} disabled={!output} style={{ ...btnSecondary, opacity: output ? 1 : 0.5 }}><Copy size={14}/> {copyFeedback || "Copier"}</button>
                 <button onClick={handleDownload} disabled={!output} style={{ ...btnSecondary, opacity: output ? 1 : 0.5 }}><Download size={14}/> Télécharger</button>
+                {outputEdited && <button onClick={handleResetEdits} style={btnSecondary}><RefreshCw size={14}/> Rétablir l'original</button>}
               </div>
               <textarea value={finalOutput} onChange={handleOutputChange} placeholder="Résultat..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: `1px solid ${th.borderS}`, borderRadius: "6px", resize: "vertical", background: th.out, color: th.text, boxSizing: "border-box" }} />
             </Panel>
@@ -769,7 +907,8 @@ function AOSConverter() {
                 { cmd: "write memory", desc: "Sauvegarde en WORKING" },
                 { cmd: "write memory flash-synchro", desc: "Sauvegarde + synchro CMMs" },
                 { cmd: "copy running certified", desc: "Valide la config" },
-                { cmd: "reload from working no rollback-timeout", desc: "Redémarrage sur WORKING" }
+                { cmd: "reload from working no rollback-timeout", desc: "Redémarrage sur WORKING" },
+                { cmd: "copy certified running make-running-directory", desc: "Copie certified vers running et met à jour le répertoire actif" }
               ]} srch={cheatSearch}/>
               <CommandCard icon={<Layers size={14} />} title="Virtual Chassis" commands={[
                 { cmd: "show virtual-chassis topology", desc: "Topologie VC" },
@@ -870,6 +1009,17 @@ function AOSConverter() {
           </div>
         </Panel>
 
+        <PortAliasModal 
+          th={th} 
+          isOpen={isAliasModalOpen} 
+          onClose={() => setIsAliasModalOpen(false)} 
+          output={output}
+          outputEdited={outputEdited}
+          editedOutput={editedOutput}
+          setOutput={setOutput}
+          setEditedOutput={setEditedOutput}
+          setOutputEdited={setOutputEdited}
+        />
         </> }
         <footer style={{ marginTop: "24px", textAlign: "center", fontSize: "12px", color: th.dim }}>
           Convertisseur AOS6 → AOS8 · Alcatel-Lucent OmniSwitch · Traitement 100% client
