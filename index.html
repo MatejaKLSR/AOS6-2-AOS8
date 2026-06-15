@@ -13,8 +13,6 @@
   button { font-family: inherit; }
   textarea, input { font-family: inherit; }
   code { font-family: 'Courier New', Consolas, Monaco, monospace; }
-  body { transition: background 0.2s; }
-  mark { border-radius: 2px; padding: 0 2px; }
 </style>
 </head>
 <body>
@@ -62,30 +60,6 @@ const btnSecondaryStyle = {
   padding: "8px 14px", background: "white", color: "#333",
   border: "1px solid #ccc", borderRadius: "6px", cursor: "pointer",
   fontSize: "13px"
-};
-
-
-/* Thèmes clair/sombre */
-const TH = {
-  light: { bg:"#f5f5f7", panel:"#fff", subtle:"#fafafa", inp:"#fafafa", out:"#f8fbfd", code:"#1E1E1E",
-    text:"#1a1a1a", muted:"#666", dim:"#999", border:"#e0e0e0", borderS:"#ccc",
-    primary:"#1F5C8B", ok:"#007700", warn:"#CC7700", err:"#CC0000", accent:"#0C447C",
-    bgWarn:"#fffbf0", bgErr:"#fff5f5", bgInfo:"#f0f7ff", bgOk:"#f0fff0" },
-  dark: { bg:"#0f1419", panel:"#1a2028", subtle:"#232b35", inp:"#1a2028", out:"#161c24", code:"#0a0f14",
-    text:"#e4e6e9", muted:"#a0a8b3", dim:"#6b7280", border:"#2d3540", borderS:"#3d4651",
-    primary:"#4a9eff", ok:"#4ade80", warn:"#fbbf24", err:"#f87171", accent:"#7dd3fc",
-    bgWarn:"#3d2f15", bgErr:"#3d1f1f", bgInfo:"#1e3a5f", bgOk:"#1a3d2a" }
-};
-
-/* Blocs injectables */
-const BLOCKS = {
-  "lldp-nb":{label:"LLDP — nearest-bridge",desc:"Notifications + TLV management, dot1, dot3",cat:"LLDP",lines:["lldp nearest-bridge chassis notification enable","lldp nearest-bridge chassis tlv management port-description enable system-name enable system-description enable","lldp nearest-bridge chassis tlv management management-address enable","lldp nearest-bridge chassis tlv dot1 vlan-name enable port-vlan enable","lldp nearest-bridge chassis tlv dot3 mac-phy enable"]},
-  "lldp-nt":{label:"LLDP — non-tpmr",desc:"Notifications + TLV avec system-capabilities",cat:"LLDP",lines:["lldp non-tpmr chassis notification enable","lldp non-tpmr chassis tlv management port-description enable system-name enable system-description enable system-capabilities enable","lldp non-tpmr chassis tlv management management-address enable"]},
-  "lldp-nc":{label:"LLDP — nearest-customer",desc:"TLV management pour ports clients",cat:"LLDP",lines:["lldp nearest-customer chassis notification enable","lldp nearest-customer chassis tlv management port-description enable system-name enable system-description enable system-capabilities enable","lldp nearest-customer chassis tlv management management-address enable"]},
-  "snmp-tf":{label:"SNMP Trap Filter",desc:"Exemple de filtre (à adapter)",cat:"SNMP",lines:["snmp-trap filter-ip <ipv4addr> <ipv6v4addr> <rfc-3513> <string>"]},
-  "dhcp-b":{label:"DHCP Relay — base",desc:"Active le relay global, à compléter par interface",cat:"DHCP",lines:["ip dhcp relay admin-state enable","ip dhcp relay per-interface-mode","! ip dhcp relay interface "<NOM>" destination <IP_SERVEUR>","! ip dhcp relay interface "<NOM>" admin-state enable"]},
-  "aaa-l":{label:"AAA — authentification locale",desc:"Console, telnet, ftp, http, snmp, ssh",cat:"AAA",lines:["aaa authentication console "local"","aaa authentication telnet "local"","aaa authentication ftp "local"","aaa authentication http "local"","aaa authentication snmp "local"","aaa authentication ssh "local""]},
-  "ntp-b":{label:"NTP — activation du client",desc:"Serveurs à définir séparément",cat:"NTP",lines:["! ntp server <IP_SERVEUR_1>","! ntp server <IP_SERVEUR_2>","ntp client admin-state enable"]}
 };
 
 /* ============================================================
@@ -300,211 +274,67 @@ const convertLine = (rawLine) => {
 /* ============================================================
    Composants UI
    ============================================================ */
-function Panel({title,icon,children,th={panel:"#fff",border:"#e0e0e0",primary:"#1F5C8B",text:"#1a1a1a"}}){
-  return <div style={{background:th.panel,borderRadius:"8px",border:`1px solid ${th.border}`,padding:"16px 20px",marginBottom:"16px"}}>
-    <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px",color:th.primary}}>
-      {icon}<h2 style={{margin:0,fontSize:"15px",fontWeight:500,color:th.text}}>{title}</h2>
+function Panel({ title, icon, children }) {
+  return (
+    <div style={{ background: "white", borderRadius: "8px", border: "1px solid #e0e0e0", padding: "16px 20px", marginBottom: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", color: "#1F5C8B" }}>
+        {icon}
+        <h2 style={{ margin: 0, fontSize: "15px", fontWeight: 500 }}>{title}</h2>
+      </div>
+      {children}
     </div>
-    {children}
-  </div>;
+  );
 }
 
-function StatCard({label,value,color,icon,th={panel:"#fff",border:"#e0e0e0",muted:"#666"}}){
-  return <div style={{background:th.panel,borderRadius:"8px",border:`1px solid ${th.border}`,padding:"12px 16px"}}>
-    <div style={{fontSize:"12px",color:th.muted,marginBottom:"4px",display:"flex",alignItems:"center",gap:"6px"}}>{icon}{label}</div>
-    <div style={{fontSize:"24px",fontWeight:500,color}}>{value}</div>
-  </div>;
-}
-
-function MappingRow({aos6,aos8,th={border:"#f0f0f0",muted:"#666",dim:"#999",accent:"#185FA5"}}){
-  return <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:"12px",padding:"6px 0",borderBottom:`1px solid ${th.border}`,alignItems:"center"}}>
-    <code style={{fontSize:"12px",color:th.muted}}>{aos6}</code>
-    <span style={{color:th.dim}}>→</span>
-    <code style={{fontSize:"12px",color:th.accent}}>{aos8}</code>
-  </div>;
-}
-
-function CommandCard({icon,title,commands,th={subtle:"#fafafa",border:"#e0e0e0",primary:"#1F5C8B",ok:"#007700",accent:"#0C447C",panel:"white",muted:"#666",bgOk:"#f0fff0",warn:"#CC7700",text:"#1a1a1a"},srch=""}){
-  const [copiedIdx,setCopiedIdx]=useState(-1);
-  const cp=async(cmd,i)=>{try{await navigator.clipboard.writeText(cmd);setCopiedIdx(i);setTimeout(()=>setCopiedIdx(-1),1500);}catch{}};
-  const filtered=srch.trim()?commands.filter(c=>c.cmd.toLowerCase().includes(srch.toLowerCase())||c.desc.toLowerCase().includes(srch.toLowerCase())||title.toLowerCase().includes(srch.toLowerCase())):commands;
-  if(!filtered.length)return null;
-  const hl=txt=>{if(!srch.trim())return txt;const re=new RegExp(`(${srch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,"gi");return txt.split(re).map((p,i)=>re.test(p)?<mark key={i} style={{background:th.warn,color:th.text}}>{p}</mark>:p);};
-  return <div style={{background:th.subtle,border:`1px solid ${th.border}`,borderRadius:"6px",padding:"12px 14px"}}>
-    <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"10px",color:th.primary,fontSize:"13px",fontWeight:500}}>{icon}{title}</div>
-    <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
-      {filtered.map((c,i)=>(
-        <div key={i} style={{paddingBottom:i<filtered.length-1?"8px":0,borderBottom:i<filtered.length-1?`1px solid ${th.border}`:"none"}}>
-          <code onClick={()=>cp(c.cmd,i)} title="Cliquer pour copier" style={{display:"block",fontSize:"12px",color:copiedIdx===i?th.ok:th.accent,background:copiedIdx===i?th.bgOk:th.panel,padding:"4px 8px",borderRadius:"4px",border:`1px solid ${copiedIdx===i?th.ok:th.border}`,marginBottom:"3px",wordBreak:"break-all",cursor:"pointer",transition:"all 0.15s"}}>{copiedIdx===i?"✓ Copié":hl(c.cmd)}</code>
-          <div style={{fontSize:"11px",color:th.muted,paddingLeft:"2px"}}>{hl(c.desc)}</div>
-        </div>
-      ))}
+function StatCard({ label, value, color, icon }) {
+  return (
+    <div style={{ background: "white", borderRadius: "8px", border: "1px solid #e0e0e0", padding: "12px 16px" }}>
+      <div style={{ fontSize: "12px", color: "#666", marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+        {icon}{label}
+      </div>
+      <div style={{ fontSize: "24px", fontWeight: 500, color }}>{value}</div>
     </div>
-  </div>;
+  );
 }
 
+function MappingRow({ aos6, aos8 }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "12px", padding: "6px 0", borderBottom: "1px solid #f0f0f0", alignItems: "center" }}>
+      <code style={{ fontSize: "12px", color: "#666" }}>{aos6}</code>
+      <span style={{ color: "#999" }}>→</span>
+      <code style={{ fontSize: "12px", color: "#185FA5" }}>{aos8}</code>
+    </div>
+  );
+}
 
-/* ── TemplatesPanel ── */
-function TemplatesPanel({templates,save,input,finalOut,setInput,setOut,setEditOut,setEdited,th,bp,bs}){
-  const [name,setName]=useState(""), [mode,setMode]=useState("input");
-  const MAX=10;
-  const iSt={padding:"8px 12px",border:`1px solid ${th.borderS}`,borderRadius:"6px",fontSize:"13px",background:th.panel,color:th.text};
-  const doSave=()=>{
-    if(!name.trim()||templates.length>=MAX)return;
-    const content=mode==="input"?input:finalOut;
-    if(!content.trim()){alert("Aucun contenu à sauvegarder.");return;}
-    save([...templates,{id:Date.now(),name:name.trim(),type:mode,content,at:new Date().toLocaleString("fr-FR")}]);
-    setName("");
+function CommandCard({ icon, title, commands }) {
+  const [copiedIdx, setCopiedIdx] = useState(-1);
+  const handleCopy = async (cmd, idx) => {
+    try { await navigator.clipboard.writeText(cmd); setCopiedIdx(idx); setTimeout(() => setCopiedIdx(-1), 1500); } catch(e) {}
   };
-  const doLoad=tpl=>{if(tpl.type==="input"){setInput(tpl.content);}else{setOut(tpl.content);setEditOut(tpl.content);setEdited(true);}};
-  const doDel=id=>{if(window.confirm("Supprimer ce template ?"))save(templates.filter(t=>t.id!==id));};
-  const doExp=()=>{const b=new Blob([JSON.stringify(templates,null,2)],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="aos-templates.json";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);};
-  const doImp=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const imp=JSON.parse(ev.target.result);if(!Array.isArray(imp))throw 0;const v=imp.filter(t=>t.name&&t.content&&t.type);save([...templates,...v].slice(0,MAX));alert(`${v.length} template(s) importé(s).`);}catch{alert("Fichier JSON invalide.");}};r.readAsText(f);e.target.value="";};
-  return <Panel title={`Templates (${templates.length}/${MAX})`} icon={<BookmarkI size={18}/>} th={th}>
-    <div style={{fontSize:"12px",color:th.muted,marginBottom:"10px"}}>Sauvegardez des configurations fréquentes. Stockage local du navigateur.</div>
-    <div style={{display:"flex",gap:"8px",marginBottom:"10px",flexWrap:"wrap",justifyContent:"flex-end"}}>
-      <label style={{...bs,padding:"5px 9px",fontSize:"12px",cursor:"pointer"}}><Upload size={12}/> Importer<input type="file" accept=".json" onChange={doImp} style={{display:"none"}}/></label>
-      {templates.length>0&&<button onClick={doExp} style={{...bs,padding:"5px 9px",fontSize:"12px"}}><Download size={12}/> Exporter</button>}
-    </div>
-    <div style={{background:th.subtle,border:`1px solid ${th.border}`,borderRadius:"6px",padding:"10px 12px",marginBottom:"10px"}}>
-      <div style={{fontSize:"12px",fontWeight:500,color:th.text,marginBottom:"7px"}}>Nouveau template</div>
-      <div style={{display:"flex",gap:"7px",flexWrap:"wrap"}}>
-        <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="Nom..." style={{...iSt,flex:1,minWidth:"140px"}}/>
-        <select value={mode} onChange={e=>setMode(e.target.value)} style={iSt}><option value="input">AOS 6</option><option value="output">AOS 8</option></select>
-        <button onClick={doSave} disabled={!name.trim()||templates.length>=MAX} style={{...bp,padding:"8px 12px",fontSize:"13px",opacity:(!name.trim()||templates.length>=MAX)?0.5:1}}><SaveIcon size={13}/> Sauvegarder</button>
+  return (
+    <div style={{ background: "#fafafa", border: "1px solid #e0e0e0", borderRadius: "6px", padding: "12px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px", color: "#1F5C8B", fontSize: "13px", fontWeight: 500 }}>
+        {icon}{title}
       </div>
-    </div>
-    {templates.length===0
-      ?<div style={{fontSize:"13px",color:th.dim,fontStyle:"italic",textAlign:"center",padding:"12px"}}>Aucun template sauvegardé.</div>
-      :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:"7px"}}>
-        {templates.map(tpl=>(
-          <div key={tpl.id} style={{border:`1px solid ${th.border}`,borderRadius:"6px",padding:"9px 11px",background:th.subtle}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"6px"}}>
-              <div><div style={{fontSize:"13px",fontWeight:500,color:th.text,wordBreak:"break-word"}}>{tpl.name}</div><div style={{fontSize:"11px",color:th.dim}}>{tpl.type==="input"?"AOS 6":"AOS 8"} · {tpl.at}</div></div>
-              <button onClick={()=>doDel(tpl.id)} style={{...bs,padding:"3px 5px"}}><Trash2 size={11}/></button>
-            </div>
-            <button onClick={()=>doLoad(tpl)} style={{...bs,padding:"5px 9px",fontSize:"12px",width:"100%",justifyContent:"center"}}><PlayI size={11}/> Charger</button>
-          </div>
-        ))}
-      </div>}
-  </Panel>;
-}
-
-/* ── WizardMode ── */
-function WizardMode({th,bp,bs,onComplete}){
-  const [step,setStep]=useState(1);
-  const [d,setD]=useState({name:"",location:"",tz:"MET",ip:"",mask:"255.255.255.0",mvlan:"1",gw:"",vlans:[{id:"1",name:"Default",on:true}],acc:[],trunk:[],dns:"",ntp:"",lldp:true,aaa:true,https:true,ssh:true});
-  const upd=(k,v)=>setD(p=>({...p,[k]:v}));
-  const iSt={width:"100%",padding:"8px 12px",border:`1px solid ${th.borderS}`,borderRadius:"6px",fontSize:"13px",background:th.panel,color:th.text,boxSizing:"border-box"};
-  const lSt={display:"block",fontSize:"12px",fontWeight:500,color:th.text,marginBottom:"4px"};
-  const steps=[{n:1,l:"Système"},{n:2,l:"VLANs"},{n:3,l:"Ports"},{n:4,l:"Réseau"},{n:5,l:"Services"},{n:6,l:"Aperçu"}];
-  const gen=useMemo(()=>{
-    const L=[];
-    L.push("! ============================================================","! Configuration AOS 8 — Assistant","! ============================================================","");
-    L.push("! Chassis:");
-    if(d.name)L.push(`system name "${d.name}"`);
-    if(d.location)L.push(`system location "${d.location}"`);
-    L.push("","! Configuration:","configuration error-file-limit 2","");
-    if(d.vlans.length){L.push("! VLAN:");d.vlans.forEach(v=>{if(v.id){L.push(`vlan ${v.id} admin-state ${v.on?"enable":"disable"}`);if(v.name)L.push(`vlan ${v.id} name "${v.name}"`);}});L.push("");}
-    if(d.acc.length){L.push("! Ports access:");d.acc.forEach(p=>{if(p.port&&p.vlan)L.push(`vlan ${p.vlan} members port ${p.port} untagged`);});L.push("");}
-    if(d.trunk.length){L.push("! Ports trunk:");d.trunk.forEach(p=>{if(p.port&&p.vlans)p.vlans.split(/[,\s]+/).filter(Boolean).forEach(v=>L.push(`vlan ${v.trim()} members port ${p.port} tagged`));});L.push("");}
-    if(d.vlans.length){L.push("! Spanning Tree:");d.vlans.forEach(v=>{if(v.id)L.push(`spantree vlan ${v.id} admin-state enable`);});L.push("");}
-    if(d.ip&&d.mvlan){L.push("! IP:");L.push(`ip interface "Management" address ${d.ip} mask ${d.mask} vlan ${d.mvlan} admin-state enable`);L.push("");}
-    if(d.gw){L.push("! Route:");L.push(`ip static-route 0.0.0.0/0 gateway ${d.gw} metric 1`);L.push("");}
-    if(d.dns){L.push("! DNS:");d.dns.split(/[,\s]+/).filter(Boolean).forEach(s=>L.push(`ip name-server ${s.trim()}`));L.push("");}
-    if(d.aaa){L.push("! AAA:");["console","telnet","ftp","http","snmp","ssh"].forEach(s=>L.push(`aaa authentication ${s} "local"`));L.push("");}
-    L.push("! System Service:");L.push(`system timezone ${d.tz}`);L.push("");
-    if(d.ntp){L.push("! NTP:");d.ntp.split(/[,\s]+/).filter(Boolean).forEach(s=>L.push(`ntp server ${s.trim()}`));L.push("ntp client admin-state enable");L.push("");}
-    if(d.lldp){L.push("! LLDP:");L.push("lldp nearest-bridge chassis notification enable");L.push("lldp nearest-bridge chassis tlv management port-description enable system-name enable system-description enable");L.push("lldp nearest-bridge chassis tlv management management-address enable");L.push("lldp nearest-bridge chassis tlv dot1 vlan-name enable port-vlan enable");L.push("lldp nearest-bridge chassis tlv dot3 mac-phy enable");L.push("");}
-    if(d.https||d.ssh){L.push("! Accès distant:");if(d.https)L.push("http ssl");if(d.ssh)L.push("ssh enable");}
-    return L.join("\n");
-  },[d]);
-  return <div style={{background:th.panel,borderRadius:"8px",border:`1px solid ${th.border}`,padding:"20px 24px",marginBottom:"16px"}}>
-    <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"16px",color:th.primary}}>
-      <Wand size={20}/><h2 style={{margin:0,fontSize:"16px",fontWeight:500,color:th.text}}>Assistant de configuration AOS 8</h2>
-    </div>
-    <div style={{display:"flex",gap:"3px",marginBottom:"18px",flexWrap:"wrap"}}>
-      {steps.map((s,i)=>(
-        <React.Fragment key={s.n}>
-          <div onClick={()=>setStep(s.n)} style={{display:"flex",alignItems:"center",gap:"4px",padding:"5px 9px",borderRadius:"6px",cursor:"pointer",background:step===s.n?th.primary:"transparent",color:step===s.n?"white":th.text,border:`1px solid ${step===s.n?th.primary:th.border}`,fontSize:"12px",fontWeight:step===s.n?500:400}}>
-            <span style={{width:"15px",height:"15px",borderRadius:"50%",background:step===s.n?"rgba(255,255,255,0.3)":th.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"10px",fontWeight:600,flexShrink:0}}>{s.n}</span>{s.l}
-          </div>
-          {i<steps.length-1&&<div style={{width:"6px",height:"1px",background:th.border,alignSelf:"center"}}/>}
-        </React.Fragment>
-      ))}
-    </div>
-    {step===1&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:"10px"}}>
-      <div><label style={lSt}>Nom du switch</label><input style={iSt} value={d.name} onChange={e=>upd("name",e.target.value)} placeholder="ex: CORE-SW-01"/></div>
-      <div><label style={lSt}>Localisation</label><input style={iSt} value={d.location} onChange={e=>upd("location",e.target.value)} placeholder="ex: Salle serveurs - Baie A1"/></div>
-      <div><label style={lSt}>Timezone</label><select style={iSt} value={d.tz} onChange={e=>upd("tz",e.target.value)}><option value="MET">MET</option><option value="CET">CET</option><option value="UTC">UTC</option><option value="GMT">GMT</option></select></div>
-    </div>}
-    {step===2&&<div>
-      <div style={{fontSize:"12px",color:th.muted,marginBottom:"8px"}}>Déclarez les VLANs du switch.</div>
-      <div style={{display:"flex",flexDirection:"column",gap:"5px",marginBottom:"8px"}}>
-        {d.vlans.map((v,i)=>(
-          <div key={i} style={{display:"grid",gridTemplateColumns:"90px 1fr auto auto",gap:"5px",alignItems:"center"}}>
-            <input style={{...iSt,width:"auto"}} value={v.id} onChange={e=>setD(p=>({...p,vlans:p.vlans.map((x,j)=>j===i?{...x,id:e.target.value}:x)}))} placeholder="ID"/>
-            <input style={{...iSt,width:"auto"}} value={v.name} onChange={e=>setD(p=>({...p,vlans:p.vlans.map((x,j)=>j===i?{...x,name:e.target.value}:x)}))} placeholder="Nom"/>
-            <label style={{display:"flex",alignItems:"center",gap:"4px",fontSize:"12px",color:th.text,whiteSpace:"nowrap"}}><input type="checkbox" checked={v.on} onChange={e=>setD(p=>({...p,vlans:p.vlans.map((x,j)=>j===i?{...x,on:e.target.checked}:x)}))}/>Actif</label>
-            <button onClick={()=>setD(p=>({...p,vlans:p.vlans.filter((_,j)=>j!==i)}))} style={{...bs,padding:"4px"}}><Trash2 size={11}/></button>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {commands.map((c, idx) => (
+          <div key={idx} style={{ paddingBottom: idx < commands.length - 1 ? "8px" : 0, borderBottom: idx < commands.length - 1 ? "1px solid #eee" : "none" }}>
+            <code onClick={() => handleCopy(c.cmd, idx)} title="Cliquer pour copier" style={{
+              display: "block", fontSize: "12px",
+              color: copiedIdx === idx ? "#007700" : "#0C447C",
+              background: copiedIdx === idx ? "#f0fff0" : "white",
+              padding: "4px 8px", borderRadius: "4px",
+              border: copiedIdx === idx ? "1px solid #007700" : "1px solid #e0e0e0",
+              marginBottom: "3px", wordBreak: "break-all", cursor: "pointer", transition: "all 0.15s"
+            }}>{copiedIdx === idx ? "✓ Copié" : c.cmd}</code>
+            <div style={{ fontSize: "11px", color: "#666", paddingLeft: "2px" }}>{c.desc}</div>
           </div>
         ))}
       </div>
-      <button onClick={()=>setD(p=>({...p,vlans:[...p.vlans,{id:"",name:"",on:true}]}))} style={{...bs,fontSize:"12px"}}><Plus size={11}/> Ajouter VLAN</button>
-    </div>}
-    {step===3&&<div>
-      <div style={{marginBottom:"14px"}}>
-        <div style={{fontSize:"13px",fontWeight:500,color:th.text,marginBottom:"5px"}}>Ports access (untagged) — format 1/1/X</div>
-        {d.acc.map((p,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:"5px",marginBottom:"4px"}}>
-          <input style={{...iSt,width:"auto"}} value={p.port} onChange={e=>setD(pr=>({...pr,acc:pr.acc.map((x,j)=>j===i?{...x,port:e.target.value}:x)}))} placeholder="1/1/1"/>
-          <input style={{...iSt,width:"auto"}} value={p.vlan} onChange={e=>setD(pr=>({...pr,acc:pr.acc.map((x,j)=>j===i?{...x,vlan:e.target.value}:x)}))} placeholder="VLAN"/>
-          <button onClick={()=>setD(pr=>({...pr,acc:pr.acc.filter((_,j)=>j!==i)}))} style={{...bs,padding:"4px"}}><Trash2 size={11}/></button>
-        </div>))}
-        <button onClick={()=>setD(p=>({...p,acc:[...p.acc,{port:"",vlan:""}]}))} style={{...bs,fontSize:"12px"}}><Plus size={11}/> Port access</button>
-      </div>
-      <div>
-        <div style={{fontSize:"13px",fontWeight:500,color:th.text,marginBottom:"5px"}}>Ports trunk (tagged) — VLANs séparés par virgule</div>
-        {d.trunk.map((p,i)=>(<div key={i} style={{display:"grid",gridTemplateColumns:"1fr 2fr auto",gap:"5px",marginBottom:"4px"}}>
-          <input style={{...iSt,width:"auto"}} value={p.port} onChange={e=>setD(pr=>({...pr,trunk:pr.trunk.map((x,j)=>j===i?{...x,port:e.target.value}:x)}))} placeholder="1/1/24"/>
-          <input style={{...iSt,width:"auto"}} value={p.vlans} onChange={e=>setD(pr=>({...pr,trunk:pr.trunk.map((x,j)=>j===i?{...x,vlans:e.target.value}:x)}))} placeholder="10, 20, 30"/>
-          <button onClick={()=>setD(pr=>({...pr,trunk:pr.trunk.filter((_,j)=>j!==i)}))} style={{...bs,padding:"4px"}}><Trash2 size={11}/></button>
-        </div>))}
-        <button onClick={()=>setD(p=>({...p,trunk:[...p.trunk,{port:"",vlans:""}]}))} style={{...bs,fontSize:"12px"}}><Plus size={11}/> Port trunk</button>
-      </div>
-    </div>}
-    {step===4&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:"10px"}}>
-      <div><label style={lSt}>IP de management</label><input style={iSt} value={d.ip} onChange={e=>upd("ip",e.target.value)} placeholder="10.0.0.1"/></div>
-      <div><label style={lSt}>Masque</label><input style={iSt} value={d.mask} onChange={e=>upd("mask",e.target.value)}/></div>
-      <div><label style={lSt}>VLAN management</label><input style={iSt} value={d.mvlan} onChange={e=>upd("mvlan",e.target.value)}/></div>
-      <div><label style={lSt}>Passerelle</label><input style={iSt} value={d.gw} onChange={e=>upd("gw",e.target.value)} placeholder="10.0.0.254"/></div>
-      <div style={{gridColumn:"1/-1"}}><label style={lSt}>Serveurs DNS</label><input style={iSt} value={d.dns} onChange={e=>upd("dns",e.target.value)} placeholder="8.8.8.8 1.1.1.1"/></div>
-      <div style={{gridColumn:"1/-1"}}><label style={lSt}>Serveurs NTP</label><input style={iSt} value={d.ntp} onChange={e=>upd("ntp",e.target.value)} placeholder="pool.ntp.org"/></div>
-    </div>}
-    {step===5&&<div style={{display:"flex",flexDirection:"column",gap:"7px"}}>
-      {[{k:"lldp",l:"LLDP (découverte des voisins)"},{k:"aaa",l:"AAA — authentification locale tous services"},{k:"https",l:"HTTPS (interface web sécurisée)"},{k:"ssh",l:"SSH (accès console sécurisé)"}].map(({k,l})=>(
-        <label key={k} style={{display:"flex",alignItems:"center",gap:"9px",padding:"9px 13px",background:th.subtle,border:`1px solid ${th.border}`,borderRadius:"6px",cursor:"pointer",fontSize:"13px",color:th.text}}>
-          <input type="checkbox" checked={d[k]} onChange={e=>upd(k,e.target.checked)}/>{l}
-        </label>
-      ))}
-    </div>}
-    {step===6&&<div>
-      <div style={{fontSize:"13px",color:th.muted,marginBottom:"8px"}}>Configuration AOS 8 générée :</div>
-      <textarea value={gen} readOnly style={{width:"100%",minHeight:"360px",padding:"12px",fontFamily:"'Courier New',monospace",fontSize:"12px",border:`1px solid ${th.border}`,borderRadius:"6px",resize:"vertical",background:th.code,color:"#D4D4D4",boxSizing:"border-box"}}/>
-      <div style={{marginTop:"9px",display:"flex",gap:"7px",flexWrap:"wrap"}}>
-        <button onClick={()=>navigator.clipboard.writeText(gen)} style={bs}><Copy size={13}/> Copier</button>
-        <button onClick={()=>{const b=new Blob([gen],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=(d.name||"config")+".cfg";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}} style={bs}><Download size={13}/> Télécharger</button>
-        <button onClick={()=>onComplete(gen)} style={bp}><RefreshCw size={13}/> Charger dans le convertisseur</button>
-      </div>
-    </div>}
-    <div style={{display:"flex",justifyContent:"space-between",marginTop:"18px",borderTop:`1px solid ${th.border}`,paddingTop:"12px"}}>
-      <button onClick={()=>setStep(Math.max(1,step-1))} disabled={step===1} style={{...bs,opacity:step===1?0.5:1}}><ChevL size={13}/> Précédent</button>
-      <button onClick={()=>setStep(Math.min(6,step+1))} disabled={step===6} style={{...bp,opacity:step===6?0.5:1}}>Suivant <ChevR size={13}/></button>
     </div>
-  </div>;
+  );
 }
-
-/* ── SaveIcon (manquant dans le fichier base) ── */
-const SaveIcon = (p) => <Icon {...p} path={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>}/>;
 
 /* ============================================================
    Application principale
@@ -520,22 +350,6 @@ function AOSConverter() {
   const [newRuleReplacement, setNewRuleReplacement] = useState("");
   const [copyFeedback, setCopyFeedback] = useState("");
   const [cheatsheetVersion, setCheatsheetVersion] = useState("aos8");
-  const [selectedOptions, setSelectedOptions] = useState({});
-  const [outputEdited, setOutputEdited] = useState(false);
-  const [editedOutput, setEditedOutput] = useState("");
-  // Theme
-  const [thName, setThName] = useState(() => { try { return localStorage.getItem("aos-th") || "light"; } catch { return "light"; } });
-  const th = TH[thName];
-  const btnPrimary = { display:"inline-flex", alignItems:"center", gap:"6px", padding:"10px 18px", background:th.primary, color:"white", border:"none", borderRadius:"6px", cursor:"pointer", fontSize:"14px", fontWeight:500 };
-  const btnSecondary = { display:"inline-flex", alignItems:"center", gap:"6px", padding:"8px 14px", background:th.panel, color:th.text, border:`1px solid ${th.borderS}`, borderRadius:"6px", cursor:"pointer", fontSize:"13px" };
-  const toggleTh = () => { const n = thName === "light" ? "dark" : "light"; setThName(n); try { localStorage.setItem("aos-th", n); } catch {} };
-  // Mode app
-  const [appMode, setAppMode] = useState("converter");
-  // Templates
-  const [templates, setTemplates] = useState(() => { try { return JSON.parse(localStorage.getItem("aos-tpl") || "[]"); } catch { return []; } });
-  const saveTemplates = t => { setTemplates(t); try { localStorage.setItem("aos-tpl", JSON.stringify(t)); } catch {} };
-  // Recherche
-  const [cheatSearch, setCheatSearch] = useState("");
   const fileInputRef = useRef(null);
 
   const handleConvert = () => {
@@ -567,7 +381,6 @@ function AOSConverter() {
     setOutput(outLines.join("\n"));
     setReport(newReport);
     setStats({ converted, unknown, deprecated, comments, total: lines.length });
-    setOutputEdited(false); setEditedOutput("");
   };
 
   const handleFileUpload = (e) => {
@@ -579,27 +392,13 @@ function AOSConverter() {
   };
 
   const handleCopy = async () => {
-    if (!finalOutput) return;
-    try { await navigator.clipboard.writeText(finalOutput); setCopyFeedback("Copié !"); setTimeout(() => setCopyFeedback(""), 2000); } catch(e) { setCopyFeedback("Erreur"); setTimeout(() => setCopyFeedback(""), 2000); }
+    if (!output) return;
+    try { await navigator.clipboard.writeText(output); setCopyFeedback("Copié !"); setTimeout(() => setCopyFeedback(""), 2000); } catch(e) { setCopyFeedback("Erreur"); setTimeout(() => setCopyFeedback(""), 2000); }
   };
 
-  // Options injectables
-  const optsBlock = useMemo(() => {
-    const sel = Object.entries(selectedOptions).filter(([,v]) => v).map(([k]) => k);
-    if (!sel.length) return "";
-    const byCat = {};
-    sel.forEach(k => { const b = BLOCKS[k]; if (!b) return; if (!byCat[b.cat]) byCat[b.cat] = []; byCat[b.cat].push(b); });
-    let out = "\n\n! ============================================================\n! Options ajoutées\n! ============================================================\n";
-    Object.entries(byCat).forEach(([cat, blocks]) => { out += `\n! -- ${cat} --\n`; blocks.forEach(b => { out += `! ${b.label}\n`; out += b.lines.join("\n") + "\n"; }); });
-    return out;
-  }, [selectedOptions]);
-  const finalOutput = useMemo(() => (outputEdited ? editedOutput : output) + optsBlock, [output, outputEdited, editedOutput, optsBlock]);
-  const handleOutputChange = e => { const v = e.target.value; const i = v.indexOf("\n\n! ==="); const base = i >= 0 ? v.substring(0, i) : v; setEditedOutput(base); setOutputEdited(true); };
-  const handleResetEdits = () => { setOutputEdited(false); setEditedOutput(""); };
-
   const handleDownload = () => {
-    if (!finalOutput) return;
-    const blob = new Blob([finalOutput], { type: "text/plain;charset=utf-8" });
+    if (!output) return;
+    const blob = new Blob([output], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = "configuration_aos8.cfg";
@@ -627,65 +426,55 @@ function AOSConverter() {
   }, [diffMode, input, output]);
 
   return (
-    <div style={{ background: th.bg, minHeight: "100vh", padding: "24px", color: th.text, transition: "background 0.2s" }}>
+    <div style={{ background: "#f5f5f7", minHeight: "100vh", padding: "24px" }}>
       <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
 
-        <header style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <header style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: th.primary, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "40px", height: "40px", borderRadius: "8px", background: "#1F5C8B", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <RefreshCw size={22} color="white" />
             </div>
             <div>
-              <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 500, color: th.text }}>Convertisseur AOS 6 → AOS 8</h1>
-              <p style={{ margin: 0, fontSize: "13px", color: th.muted }}>Alcatel-Lucent OmniSwitch — Migration de configuration</p>
+              <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 500 }}>Convertisseur AOS 6 → AOS 8</h1>
+              <p style={{ margin: 0, fontSize: "13px", color: "#666" }}>Alcatel-Lucent OmniSwitch — Migration de configuration</p>
             </div>
-          </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <div style={{ display: "flex", background: th.panel, border: `1px solid ${th.border}`, borderRadius: "6px", padding: "2px" }}>
-              <button onClick={() => setAppMode("converter")} style={{ ...btnSecondary, background: appMode === "converter" ? th.primary : "transparent", color: appMode === "converter" ? "white" : th.text, border: "none", padding: "6px 12px" }}><RefreshCw size={13}/> Convertisseur</button>
-              <button onClick={() => setAppMode("wizard")} style={{ ...btnSecondary, background: appMode === "wizard" ? th.primary : "transparent", color: appMode === "wizard" ? "white" : th.text, border: "none", padding: "6px 12px" }}><Wand size={13}/> Assistant</button>
-            </div>
-            <button onClick={toggleTh} title={thName === "light" ? "Mode sombre" : "Mode clair"} style={{ ...btnSecondary, padding: "8px 10px" }}>{thName === "light" ? <Moon size={14}/> : <Sun size={14}/>}</button>
           </div>
         </header>
 
-        {appMode === "wizard" && <WizardMode th={th} bp={btnPrimary} bs={btnSecondary} onComplete={gen => { setInput(gen); setAppMode("converter"); }}/>}
-        {appMode === "converter" && <>
-
         {stats.total > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "20px" }}>
-            <StatCard label="Lignes totales" value={stats.total} color={th.text} th={th}/>
-            <StatCard label="Converties" value={stats.converted} color={th.ok} icon={<CheckCircle2 size={14}/>} th={th}/>
-            <StatCard label="Dépréciées" value={stats.deprecated} color={th.warn} icon={<AlertTriangle size={14}/>} th={th}/>
-            <StatCard label="Non reconnues" value={stats.unknown} color={th.err} icon={<AlertTriangle size={14}/>} th={th}/>
+            <StatCard label="Lignes totales" value={stats.total} color="#444" />
+            <StatCard label="Converties" value={stats.converted} color="#007700" icon={<CheckCircle2 size={14} />} />
+            <StatCard label="Dépréciées" value={stats.deprecated} color="#CC7700" icon={<AlertTriangle size={14} />} />
+            <StatCard label="Non reconnues" value={stats.unknown} color="#CC0000" icon={<AlertTriangle size={14} />} />
           </div>
         )}
 
         <div style={{ display: "grid", gridTemplateColumns: diffMode ? "1fr" : "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
           {!diffMode && (
-            <Panel title="Configuration AOS 6 (source)" icon={<FileCode size={18}  th={th}/>}>
+            <Panel title="Configuration AOS 6 (source)" icon={<FileCode size={18} />}>
               <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
-                <button onClick={() => fileInputRef.current?.click()} style={btnSecondary}><Upload size={14}/> Charger fichier</button>
+                <button onClick={() => fileInputRef.current?.click()} style={btnSecondaryStyle}><Upload size={14}/> Charger fichier</button>
                 <input ref={fileInputRef} type="file" accept=".cfg,.txt,.conf" onChange={handleFileUpload} style={{ display: "none" }} />
-                <button onClick={handleClear} style={btnSecondary}><Trash2 size={14}/> Vider</button>
+                <button onClick={handleClear} style={btnSecondaryStyle}><Trash2 size={14}/> Vider</button>
               </div>
-              <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Collez ici la configuration AOS 6..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: `1px solid ${th.borderS}`, borderRadius: "6px", resize: "vertical", background: th.inp, color: th.text, boxSizing: "border-box" }} />
+              <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Collez ici la configuration AOS 6..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: "1px solid #ccc", borderRadius: "6px", resize: "vertical", background: "#fafafa", boxSizing: "border-box" }} />
             </Panel>
           )}
           {!diffMode && (
-            <Panel title="Configuration AOS 8 (résultat)" icon={<FileText size={18}  th={th}/>}>
+            <Panel title="Configuration AOS 8 (résultat)" icon={<FileText size={18} />}>
               <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
-                <button onClick={handleCopy} disabled={!output} style={{ ...btnSecondary, opacity: output ? 1 : 0.5 }}><Copy size={14}/> {copyFeedback || "Copier"}</button>
-                <button onClick={handleDownload} disabled={!output} style={{ ...btnSecondary, opacity: output ? 1 : 0.5 }}><Download size={14}/> Télécharger</button>
+                <button onClick={handleCopy} disabled={!output} style={{ ...btnSecondaryStyle, opacity: output ? 1 : 0.5 }}><Copy size={14}/> {copyFeedback || "Copier"}</button>
+                <button onClick={handleDownload} disabled={!output} style={{ ...btnSecondaryStyle, opacity: output ? 1 : 0.5 }}><Download size={14}/> Télécharger</button>
               </div>
               <textarea value={output} readOnly placeholder="Résultat..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: "1px solid #ccc", borderRadius: "6px", resize: "vertical", background: "#f8fbfd", boxSizing: "border-box" }} />
             </Panel>
           )}
           {diffMode && (
-            <Panel title="Comparaison AOS 6 ↔ AOS 8" icon={<GitCompare size={18}  th={th}/>}>
+            <Panel title="Comparaison AOS 6 ↔ AOS 8" icon={<GitCompare size={18} />}>
               <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-                <button onClick={handleCopy} disabled={!output} style={{ ...btnSecondary, opacity: output ? 1 : 0.5 }}><Copy size={14}/> {copyFeedback || "Copier AOS8"}</button>
-                <button onClick={handleDownload} disabled={!output} style={{ ...btnSecondary, opacity: output ? 1 : 0.5 }}><Download size={14}/> Télécharger</button>
+                <button onClick={handleCopy} disabled={!output} style={{ ...btnSecondaryStyle, opacity: output ? 1 : 0.5 }}><Copy size={14}/> {copyFeedback || "Copier AOS8"}</button>
+                <button onClick={handleDownload} disabled={!output} style={{ ...btnSecondaryStyle, opacity: output ? 1 : 0.5 }}><Download size={14}/> Télécharger</button>
               </div>
               <div style={{ border: "1px solid #ccc", borderRadius: "6px", maxHeight: "500px", overflow: "auto" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "1px solid #ccc", zIndex: 1 }}>
@@ -707,12 +496,12 @@ function AOSConverter() {
         </div>
 
         <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
-          <button onClick={handleConvert} style={btnPrimary}><RefreshCw size={16}/> Convertir vers AOS 8</button>
-          <button onClick={() => setDiffMode(!diffMode)} style={btnSecondary}><GitCompare size={14}/> {diffMode ? "Mode édition" : "Mode comparaison"}</button>
+          <button onClick={handleConvert} style={btnPrimaryStyle}><RefreshCw size={16}/> Convertir vers AOS 8</button>
+          <button onClick={() => setDiffMode(!diffMode)} style={btnSecondaryStyle}><GitCompare size={14}/> {diffMode ? "Mode édition" : "Mode comparaison"}</button>
         </div>
 
         {report.length > 0 && (
-          <Panel title={`Rapport (${report.length})`} icon={<Info size={18}  th={th}/>}>
+          <Panel title={`Rapport (${report.length})`} icon={<Info size={18} />}>
             <div style={{ maxHeight: "300px", overflow: "auto", border: "1px solid #e0e0e0", borderRadius: "6px" }}>
               {report.map((r, idx) => (
                 <div key={idx} style={{ padding: "10px 14px", borderBottom: idx < report.length - 1 ? "1px solid #eee" : "none", background: r.level === "error" ? "#fff5f5" : r.level === "warning" ? "#fffbf0" : "#f0f7ff", fontSize: "13px" }}>
@@ -729,11 +518,11 @@ function AOSConverter() {
           </Panel>
         )}
 
-        <Panel title="Règles personnalisées (regex)" icon={<Plus size={18}  th={th}/>}>
+        <Panel title="Règles personnalisées (regex)" icon={<Plus size={18} />}>
           <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
             <input type="text" value={newRulePattern} onChange={e => setNewRulePattern(e.target.value)} placeholder="Pattern regex" style={{ flex: 1, minWidth: "200px", padding: "8px 12px", border: "1px solid #ccc", borderRadius: "6px", fontFamily: "'Courier New', monospace", fontSize: "13px" }}/>
             <input type="text" value={newRuleReplacement} onChange={e => setNewRuleReplacement(e.target.value)} placeholder="Remplacement" style={{ flex: 1, minWidth: "200px", padding: "8px 12px", border: "1px solid #ccc", borderRadius: "6px", fontFamily: "'Courier New', monospace", fontSize: "13px" }}/>
-            <button onClick={handleAddRule} style={btnSecondary}><Plus size={14}/> Ajouter</button>
+            <button onClick={handleAddRule} style={btnSecondaryStyle}><Plus size={14}/> Ajouter</button>
           </div>
           {customRules.length > 0 && (
             <div style={{ border: "1px solid #e0e0e0", borderRadius: "6px" }}>
@@ -742,42 +531,35 @@ function AOSConverter() {
                   <span style={{ flex: 1, color: "#666" }}>{r.pattern}</span>
                   <span>→</span>
                   <span style={{ flex: 1, color: "#185FA5" }}>{r.replacement}</span>
-                  <button onClick={() => setCustomRules(customRules.filter((_, i) => i !== idx))} style={{ ...btnSecondary, padding: "4px 8px" }}><Trash2 size={12}/></button>
+                  <button onClick={() => setCustomRules(customRules.filter((_, i) => i !== idx))} style={{ ...btnSecondaryStyle, padding: "4px 8px" }}><Trash2 size={12}/></button>
                 </div>
               ))}
             </div>
           )}
         </Panel>
 
-        <TemplatesPanel templates={templates} save={saveTemplates} input={input} finalOut={finalOut} setInput={setInput} setOut={setOutput} setEditOut={setEditedOutput} setEdited={setOutputEdited} th={th} bp={btnPrimary} bs={btnSecondary}/>
-
-        <Panel title="Aide-mémoire des commandes" icon={<Terminal size={18}  th={th}/>}>
-          <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap", alignItems: "center" }}>
-            <button onClick={() => setCheatsheetVersion("aos8")} style={{ ...btnSecondary, background: cheatsheetVersion === "aos8" ? th.primary : th.panel, color: cheatsheetVersion === "aos8" ? "white" : th.text, borderColor: cheatsheetVersion === "aos8" ? th.primary : th.borderS }}><Terminal size={14}/> AOS 8</button>
-            <button onClick={() => setCheatsheetVersion("aos6")} style={{ ...btnSecondary, background: cheatsheetVersion === "aos6" ? th.primary : th.panel, color: cheatsheetVersion === "aos6" ? "white" : th.text, borderColor: cheatsheetVersion === "aos6" ? th.primary : th.borderS }}><Terminal size={14}/> AOS 6</button>
-            <div style={{ flex: 1, minWidth: "180px", display: "flex", alignItems: "center", gap: "6px", border: `1px solid ${th.borderS}`, borderRadius: "6px", padding: "5px 10px", background: th.panel }}>
-              <Search size={14} color={th.dim}/>
-              <input type="text" value={cheatSearch} onChange={e => setCheatSearch(e.target.value)} placeholder="Rechercher une commande..." style={{ border: "none", outline: "none", background: "transparent", fontSize: "13px", color: th.text, flex: 1 }}/>
-              {cheatSearch && <button onClick={() => setCheatSearch("")} style={{ border: "none", background: "none", cursor: "pointer", color: th.dim, padding: "0", fontSize: "14px", lineHeight: 1 }}>✕</button>}
-            </div>
+        <Panel title="Aide-mémoire des commandes" icon={<Terminal size={18} />}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "16px", borderBottom: "1px solid #e0e0e0", paddingBottom: "12px" }}>
+            <button onClick={() => setCheatsheetVersion("aos8")} style={{ ...btnSecondaryStyle, background: cheatsheetVersion === "aos8" ? "#1F5C8B" : "white", color: cheatsheetVersion === "aos8" ? "white" : "#333", borderColor: cheatsheetVersion === "aos8" ? "#1F5C8B" : "#ccc" }}><Terminal size={14}/> AOS 8</button>
+            <button onClick={() => setCheatsheetVersion("aos6")} style={{ ...btnSecondaryStyle, background: cheatsheetVersion === "aos6" ? "#1F5C8B" : "white", color: cheatsheetVersion === "aos6" ? "white" : "#333", borderColor: cheatsheetVersion === "aos6" ? "#1F5C8B" : "#ccc" }}><Terminal size={14}/> AOS 6</button>
           </div>
 
           {cheatsheetVersion === "aos8" && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "12px" }}>
-              <CommandCard icon={<FileText size={14} srch={cheatSearch} th={th}/>} title="Affichage & statut" commands={[
+              <CommandCard icon={<FileText size={14}/>} title="Affichage & statut" commands={[
                 { cmd: "show running-directory", desc: "Statut config (WORKING/CERTIFIED)" },
                 { cmd: "show configuration snapshot", desc: "Config complète" },
                 { cmd: "show system", desc: "Infos système" },
                 { cmd: "show chassis", desc: "État du châssis" },
                 { cmd: "show microcode", desc: "Version AOS" }
               ]}/>
-              <CommandCard icon={<Save size={14} srch={cheatSearch} th={th}/>} title="Sauvegarde" commands={[
+              <CommandCard icon={<Save size={14}/>} title="Sauvegarde" commands={[
                 { cmd: "write memory", desc: "Sauvegarde en WORKING" },
                 { cmd: "write memory flash-synchro", desc: "Sauvegarde + synchro CMMs" },
                 { cmd: "copy running certified", desc: "Valide la config" },
                 { cmd: "reload from working no rollback-timeout", desc: "Redémarrage sur WORKING" }
               ]}/>
-              <CommandCard icon={<Layers size={14} srch={cheatSearch} th={th}/>} title="Virtual Chassis" commands={[
+              <CommandCard icon={<Layers size={14}/>} title="Virtual Chassis" commands={[
                 { cmd: "show virtual-chassis topology", desc: "Topologie VC" },
                 { cmd: "show virtual-chassis vf-link", desc: "État liens VFL" },
                 { cmd: "cat /flash/certified/vcsetup.cfg", desc: "Config VC" },
@@ -785,7 +567,7 @@ function AOSConverter() {
                 { cmd: "virtual-chassis auto-vf-link-port 1/1/X", desc: "Déclare port VFL" },
                 { cmd: "virtual-chassis chassis-id 1 chassis-group <ID>", desc: "Groupe VC (même ID)" }
               ]}/>
-              <CommandCard icon={<FileCode size={14} srch={cheatSearch} th={th}/>} title="VLANs & interfaces" commands={[
+              <CommandCard icon={<FileCode size={14}/>} title="VLANs & interfaces" commands={[
                 { cmd: "show vlan", desc: "Liste VLANs" },
                 { cmd: "show vlan port", desc: "Mapping ports/VLANs" },
                 { cmd: "show interfaces status", desc: "État up/down" },
@@ -793,13 +575,13 @@ function AOSConverter() {
                 { cmd: "interfaces port 1/1/X admin-state enable", desc: "Active un port" },
                 { cmd: "spantree mode per-vlan", desc: "Spanning-tree par VLAN" }
               ]}/>
-              <CommandCard icon={<Terminal size={14} srch={cheatSearch} th={th}/>} title="Table MAC & ARP" commands={[
+              <CommandCard icon={<Terminal size={14}/>} title="Table MAC & ARP" commands={[
                 { cmd: "show mac-learning", desc: "Table MAC" },
                 { cmd: "show mac-learning port 1/1/X", desc: "MACs d'un port" },
                 { cmd: "show mac-learning vlan X", desc: "MACs d'un VLAN" },
                 { cmd: "show arp", desc: "Table ARP" }
               ]}/>
-              <CommandCard icon={<Layers size={14} srch={cheatSearch} th={th}/>} title="IP Multicast (IGMP)" commands={[
+              <CommandCard icon={<Layers size={14}/>} title="IP Multicast (IGMP)" commands={[
                 { cmd: "ip multicast admin-state enable", desc: "Active multicast global" },
                 { cmd: "ip multicast vlan X admin-state enable", desc: "Active par VLAN" },
                 { cmd: "ip multicast vlan X version 2", desc: "Version IGMP" },
@@ -810,38 +592,38 @@ function AOSConverter() {
 
           {cheatsheetVersion === "aos6" && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "12px" }}>
-              <CommandCard icon={<FileText size={14} srch={cheatSearch} th={th}/>} title="Affichage & statut" commands={[
+              <CommandCard icon={<FileText size={14}/>} title="Affichage & statut" commands={[
                 { cmd: "show running-directory", desc: "Directory active" },
                 { cmd: "show configuration snapshot", desc: "Config complète" },
                 { cmd: "show system", desc: "Infos système" },
                 { cmd: "show chassis", desc: "État châssis" },
                 { cmd: "show microcode", desc: "Version AOS" }
               ]}/>
-              <CommandCard icon={<Save size={14} srch={cheatSearch} th={th}/>} title="Sauvegarde" commands={[
+              <CommandCard icon={<Save size={14}/>} title="Sauvegarde" commands={[
                 { cmd: "write memory", desc: "Sauvegarde en working" },
                 { cmd: "copy working certified", desc: "Valide" },
                 { cmd: "copy working certified flash-synchro", desc: "+ synchro stack" },
                 { cmd: "reload working no rollback-timeout", desc: "Redémarre sur working" }
               ]}/>
-              <CommandCard icon={<Layers size={14} srch={cheatSearch} th={th}/>} title="Stack" commands={[
+              <CommandCard icon={<Layers size={14}/>} title="Stack" commands={[
                 { cmd: "show stack topology", desc: "Topologie stack" },
                 { cmd: "show stack status", desc: "État stack" },
                 { cmd: "takeover", desc: "Bascule CMM" }
               ]}/>
-              <CommandCard icon={<FileCode size={14} srch={cheatSearch} th={th}/>} title="VLANs & interfaces" commands={[
+              <CommandCard icon={<FileCode size={14}/>} title="VLANs & interfaces" commands={[
                 { cmd: "show vlan", desc: "Liste VLANs" },
                 { cmd: "show vlan port X/Y", desc: "VLANs d'un port" },
                 { cmd: "show interfaces status", desc: "État up/down" },
                 { cmd: "interfaces X/Y admin up", desc: "Active port" },
                 { cmd: "interfaces X/Y admin down", desc: "Désactive port" }
               ]}/>
-              <CommandCard icon={<Terminal size={14} srch={cheatSearch} th={th}/>} title="Table MAC & ARP" commands={[
+              <CommandCard icon={<Terminal size={14}/>} title="Table MAC & ARP" commands={[
                 { cmd: "show mac-address-table", desc: "Table MAC" },
                 { cmd: "show mac-address-table slot X", desc: "MACs d'un slot" },
                 { cmd: "show mac-address-table vlan X", desc: "MACs d'un VLAN" },
                 { cmd: "show arp", desc: "Table ARP" }
               ]}/>
-              <CommandCard icon={<BookOpen size={14} srch={cheatSearch} th={th}/>} title="Monitoring" commands={[
+              <CommandCard icon={<BookOpen size={14}/>} title="Monitoring" commands={[
                 { cmd: "show lldp remote-system", desc: "Voisins LLDP" },
                 { cmd: "show health", desc: "CPU/mémoire" },
                 { cmd: "show lanpower slot X", desc: "État PoE" },
@@ -851,34 +633,33 @@ function AOSConverter() {
           )}
         </Panel>
 
-        <Panel title="Règles de conversion principales" icon={<Info size={18}  th={th}/>}>
+        <Panel title="Règles de conversion principales" icon={<Info size={18} />}>
           <div style={{ fontSize: "13px", color: "#444", lineHeight: 1.6 }}>
-            <MappingRow aos6={`vlan X enable name "Y"`} aos8={`vlan X admin-state enable + vlan X name "Y"`} th={th}/>
-            <MappingRow aos6="vlan X port default Y/Z" aos8="vlan X members port 1/Y/Z untagged" th={th}/>
-            <MappingRow aos6="vlan X 802.1q Y/Z" aos8="vlan X members port 1/Y/Z tagged" th={th}/>
-            <MappingRow aos6="interfaces Y/Z admin up" aos8="interfaces port 1/Y/Z admin-state enable" th={th}/>
-            <MappingRow aos6="ip helper per-vlan only" aos8="ip dhcp relay admin-state enable + per-interface-mode" th={th}/>
-            <MappingRow aos6="ip http ssl" aos8="http ssl" th={th}/>
-            <MappingRow aos6="session timeout cli X" aos8="session cli timeout X" th={th}/>
-            <MappingRow aos6="snmp authentication trap enable" aos8="snmp authentication-trap enable" th={th}/>
-            <MappingRow aos6="snmp community map mode off" aos8="snmp community-map mode disable" th={th}/>
-            <MappingRow aos6="snmp community map mode on" aos8="snmp community-map mode enable" th={th}/>
-            <MappingRow aos6="bridge mode 1x1" aos8="spantree mode per-vlan" th={th}/>
-            <MappingRow aos6="ntp client enable" aos8="ntp client admin-state enable" th={th}/>
-            <MappingRow aos6="lanpower stop Y/Z" aos8="lanpower port 1/Y/Z admin-state disable" th={th}/>
-            <MappingRow aos6="ntp broadcast-client enable" aos8="[déprécié] ntp client admin-state enable seul" th={th}/>
+            <MappingRow aos6={`vlan X enable name "Y"`} aos8={`vlan X admin-state enable + vlan X name "Y"`}/>
+            <MappingRow aos6="vlan X port default Y/Z" aos8="vlan X members port 1/Y/Z untagged"/>
+            <MappingRow aos6="vlan X 802.1q Y/Z" aos8="vlan X members port 1/Y/Z tagged"/>
+            <MappingRow aos6="interfaces Y/Z admin up" aos8="interfaces port 1/Y/Z admin-state enable"/>
+            <MappingRow aos6="ip helper per-vlan only" aos8="ip dhcp relay admin-state enable + per-interface-mode"/>
+            <MappingRow aos6="ip http ssl" aos8="http ssl"/>
+            <MappingRow aos6="session timeout cli X" aos8="session cli timeout X"/>
+            <MappingRow aos6="snmp authentication trap enable" aos8="snmp authentication-trap enable"/>
+            <MappingRow aos6="snmp community map mode off" aos8="snmp community-map mode disable"/>
+            <MappingRow aos6="snmp community map mode on" aos8="snmp community-map mode enable"/>
+            <MappingRow aos6="bridge mode 1x1" aos8="spantree mode per-vlan"/>
+            <MappingRow aos6="ntp client enable" aos8="ntp client admin-state enable"/>
+            <MappingRow aos6="lanpower stop Y/Z" aos8="lanpower port 1/Y/Z admin-state disable"/>
+            <MappingRow aos6="ntp broadcast-client enable" aos8="[déprécié] ntp client admin-state enable seul"/>
             <MappingRow aos6="ntp broadcast-delay <num>" aos8="ntp broadcast-delay <num> (identique)"/>
-            <MappingRow aos6="system daylight savings time enable" aos8="system daylight-savings-time enable (tirets)" th={th}/>
-            <MappingRow aos6="ip service all" aos8="[déprécié]" th={th}/>
-            <MappingRow aos6="ip multicast vlan X status enable" aos8="ip multicast vlan X admin-state enable" th={th}/>
-            <MappingRow aos6="user password-size min X" aos8="user password-size min X (identique)" th={th}/>
-            <MappingRow aos6="snmp trap filter" aos8="snmp-trap filter-ip (ipv4addr | ipv6v4addr | rfc-3513) string" th={th}/>
+            <MappingRow aos6="system daylight savings time enable" aos8="system daylight-savings-time enable (tirets)"/>
+            <MappingRow aos6="ip service all" aos8="[déprécié]"/>
+            <MappingRow aos6="ip multicast vlan X status enable" aos8="ip multicast vlan X admin-state enable"/>
+            <MappingRow aos6="user password-size min X" aos8="user password-size min X (identique)"/>
+            <MappingRow aos6="snmp trap filter" aos8="snmp-trap filter-ip (ipv4addr | ipv6v4addr | rfc-3513) string"/>
           </div>
         </Panel>
 
-        </> }
-        <footer style={{ marginTop: "24px", textAlign: "center", fontSize: "12px", color: th.dim }}>
-          Convertisseur AOS6 → AOS8 · Alcatel-Lucent OmniSwitch · Traitement 100% client
+        <footer style={{ marginTop: "24px", textAlign: "center", fontSize: "12px", color: "#999" }}>
+          Outil de conversion AOS6 → AOS8 · Traitement 100% client · Vérifiez toujours la conf générée
         </footer>
       </div>
     </div>
