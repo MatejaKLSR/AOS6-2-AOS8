@@ -389,37 +389,23 @@ function TemplatesPanel({templates,save,input,finalOut,setInput,setOut,setEditOu
 }
 
 /* ── PortAliasModal ── */
-function PortAliasModal({ th, isOpen, onClose, output, outputEdited, editedOutput, setOutput, setEditedOutput, setOutputEdited }) {
+function PortAliasModal({ th, isOpen, onClose, output, outputEdited, editedOutput, setEditedOutput, setOutputEdited }) {
   const [port, setPort] = useState("");
-  const [deviceType, setDeviceType] = useState("AP");
   const [customName, setCustomName] = useState("");
 
   if (!isOpen) return null;
 
-  const types = {
-    "AP": { label: "Borne Wi-Fi", prefix: "AP" },
-    "ALARM": { label: "Alarme / SSI", prefix: "ALARM" },
-    "NVR": { label: "Caméra / NVR", prefix: "CAM" },
-    "PHONE": { label: "Téléphone IP", prefix: "TEL" },
-    "PC": { label: "Poste Client / PC", prefix: "PC" },
-    "SRV": { label: "Serveur", prefix: "SRV" }
-  };
-
   const handleInject = () => {
-    if (!port.trim()) return;
+    if (!port.trim() || !customName.trim()) return;
     
     let formattedPort = port.trim();
     if (/^\d+\/\d+$/.test(formattedPort)) {
       formattedPort = `1/${formattedPort}`;
     }
 
-    const prefix = types[deviceType].prefix;
     const cleanName = customName.trim().toUpperCase().replace(/[^A-Z0-9_\-]/g, "_");
-    const finalAlias = cleanName ? `${prefix}_${cleanName}` : prefix;
-
-    const line = `interfaces port ${formattedPort} alias "${finalAlias}"`;
+    const line = `interfaces port ${formattedPort} alias "${cleanName}"`;
     
-    // Déterminer la base textuelle sur laquelle injecter la nouvelle ligne
     const currentBase = outputEdited ? editedOutput : output;
     const updatedText = currentBase ? `${currentBase}\n${line}` : line;
     
@@ -447,20 +433,13 @@ function PortAliasModal({ th, isOpen, onClose, output, outputEdited, editedOutpu
         </div>
 
         <div>
-          <label style={lSt}>Type d'équipement</label>
-          <select value={deviceType} onChange={e => setDeviceType(e.target.value)} style={iSt}>
-            {Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-        </div>
-
-        <div>
-          <label style={lSt}>Nom descriptif de l'alias</label>
-          <input type="text" value={customName} onChange={e => setCustomName(e.target.value)} placeholder="Ex: ACCUEIL, ETAGE1" style={iSt} />
+          <label style={lSt}>Nom ou description de l'alias</label>
+          <input type="text" value={customName} onChange={e => setCustomName(e.target.value)} placeholder="Ex: AP_ACCUEIL, CAM_PARKING" style={iSt} />
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
           <button onClick={onClose} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${th.borderS}`, color: th.text, borderRadius: "6px", cursor: "pointer", fontSize: "13px" }}>Annuler</button>
-          <button onClick={handleInject} disabled={!port.trim()} style={{ padding: "8px 14px", background: th.primary, color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 500, opacity: !port.trim() ? 0.5 : 1 }}>Injecter dans le résultat</button>
+          <button onClick={handleInject} disabled={!port.trim() || !customName.trim()} style={{ padding: "8px 14px", background: th.primary, color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 500, opacity: (!port.trim() || !customName.trim()) ? 0.5 : 1 }}>Injecter dans le résultat</button>
         </div>
       </div>
     </div>
@@ -797,7 +776,6 @@ function AOSConverter() {
               <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
                 <button onClick={() => fileInputRef.current?.click()} style={btnSecondary}><Upload size={14}/> Charger fichier</button>
                 <input ref={fileInputRef} type="file" accept=".cfg,.txt,.conf" onChange={handleFileUpload} style={{ display: "none" }} />
-                <button onClick={() => setIsAliasModalOpen(true)} style={btnSecondary}><Plus size={14}/> Ajouter un alias</button>
                 <button onClick={handleClear} style={btnSecondary}><Trash2 size={14}/> Vider</button>
               </div>
               <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="Collez ici la configuration AOS 6..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: `1px solid ${th.borderS}`, borderRadius: "6px", resize: "vertical", background: th.inp, color: th.text, boxSizing: "border-box" }} />
@@ -808,6 +786,7 @@ function AOSConverter() {
               <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
                 <button onClick={handleCopy} disabled={!output} style={{ ...btnSecondary, opacity: output ? 1 : 0.5 }}><Copy size={14}/> {copyFeedback || "Copier"}</button>
                 <button onClick={handleDownload} disabled={!output} style={{ ...btnSecondary, opacity: output ? 1 : 0.5 }}><Download size={14}/> Télécharger</button>
+                <button onClick={() => setIsAliasModalOpen(true)} disabled={!output} style={btnSecondary}><Plus size={14}/> Ajouter un alias</button>
                 {outputEdited && <button onClick={handleResetEdits} style={btnSecondary}><RefreshCw size={14}/> Rétablir l'original</button>}
               </div>
               <textarea value={finalOutput} onChange={handleOutputChange} placeholder="Résultat..." style={{ width: "100%", minHeight: "400px", padding: "12px", fontFamily: "'Courier New', monospace", fontSize: "13px", border: `1px solid ${th.borderS}`, borderRadius: "6px", resize: "vertical", background: th.out, color: th.text, boxSizing: "border-box" }} />
@@ -1016,7 +995,6 @@ function AOSConverter() {
           output={output}
           outputEdited={outputEdited}
           editedOutput={editedOutput}
-          setOutput={setOutput}
           setEditedOutput={setEditedOutput}
           setOutputEdited={setOutputEdited}
         />
